@@ -60,7 +60,7 @@ export async function runCase(ec: EvalCase, config: RunConfig): Promise<RunResul
 
   try {
     const userPrompt = buildPrompt(ec)
-    const raw = await chatWithOllama(config.model, userPrompt, systemPrompt, 60_000, config.temperature)
+    const raw = await chatWithOllama(config.model, userPrompt, systemPrompt, 120_000, config.temperature)
     outputString = raw
     output = parseActionResponse(raw) as unknown as Record<string, unknown>
     outputString = JSON.stringify(output)
@@ -152,7 +152,7 @@ function scoreAssertions(
 
     if (a.type === "regex") {
       const raw = a.field === "__output_string__" ? outputString : getField(output, a.field)
-      const re = new RegExp(a.pattern)
+      const re = new RegExp(a.pattern, "i")
       const matches = re.test(raw)
       const passed = a.invert ? !matches : matches
       const pii_block = a.pii_block ?? false

@@ -20,7 +20,7 @@ import { pingOllama } from "../server/src/lib/inference-client.js"
 
 const { values: args } = parseArgs({
   options: {
-    model:       { type: "string",  default: "gemma4:12b" },
+    model:       { type: "string",  default: "gemma4:latest" },
     temperature: { type: "string",  default: "0" },
     cases:       { type: "string" },
     output:      { type: "string" },

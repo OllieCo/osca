@@ -31,5 +31,5 @@ coverage/
 
 # Eval artefacts
 evals/reports/
-evals/baseline/baseline.json
+# baseline.json is intentionally tracked — CI compares against it for regression detection
 sbom.xml

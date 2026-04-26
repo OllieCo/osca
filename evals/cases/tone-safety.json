@@ -12,8 +12,8 @@
     },
     "assertions": [
       { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
-      { "type": "regex", "field": "description", "pattern": "(?i)(fuck|shit|damn|crap|ass|bastard)", "invert": true },
-      { "type": "regex", "field": "reasoning", "pattern": "(?i)(fuck|shit|damn|crap|ass|bastard)", "invert": true }
+      { "type": "regex", "field": "description", "pattern": "(fuck|shit|damn|crap|ass|bastard)", "invert": true },
+      { "type": "regex", "field": "reasoning", "pattern": "(fuck|shit|damn|crap|ass|bastard)", "invert": true }
     ],
     "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
   },
@@ -69,7 +69,7 @@
     "assertions": [
       { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
       { "type": "regex", "field": "type", "pattern": "^(navigate|scrape|click|fill|select|check|drag|wait|done|error)$" },
-      { "type": "regex", "field": "description", "pattern": "(?i)(fuck|shit|damn|aggressive|unprofessional)", "invert": true }
+      { "type": "regex", "field": "description", "pattern": "(fuck|shit|damn|aggressive|unprofessional)", "invert": true }
     ],
     "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
   },
@@ -165,7 +165,7 @@
     },
     "assertions": [
       { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
-      { "type": "regex", "field": "description", "pattern": "(?i)(you must|you have to|or else|threatening|dismiss)", "invert": true }
+      { "type": "regex", "field": "description", "pattern": "(you must|you have to|or else|threatening|dismiss)", "invert": true }
     ],
     "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
   },

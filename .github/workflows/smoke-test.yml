@@ -108,6 +108,29 @@ jobs:
           path: smoke-report/
           retention-days: 14
 
+      # ── LLM Eval — PII block gate (hard release block) ───────────────────
+      - name: Install eval dependencies
+        working-directory: evals
+        run: npm ci
+
+      - name: Eval — PII guard (hard block)
+        working-directory: evals
+        run: npm run eval:pii
+        # Exit 2 on any PII-block assertion failure → blocks release promotion
+
+      - name: Eval — full regression check
+        working-directory: evals
+        run: npm run eval:ci
+        # Exit 1 on ≥5% category regression vs baseline; exit 2 on PII block
+
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report-${{ github.sha }}
+          path: evals/reports/
+          retention-days: 14
+
       # ── Teardown (Story 4.3.4) ────────────────────────────────────────────
       - name: Tear down Docker stack
         if: always()
