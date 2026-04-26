@@ -1,0 +1,168 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── Server (Express API) ────────────────────────────────────────────────
+  server:
+    name: Server — typecheck / test / build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Schema version parity check
+        working-directory: .
+        run: node scripts/validate-schema.js
+
+      - name: Upload build artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-dist-${{ github.sha }}
+          path: server/dist/
+          retention-days: 7
+
+  # ─── Client (React SPA) ─────────────────────────────────────────────────
+  client:
+    name: Client — lint / typecheck / test / build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-dist-${{ github.sha }}
+          path: client/dist/
+          retention-days: 7
+
+  # ─── Evals ───────────────────────────────────────────────────────────────
+  evals:
+    name: Evals — validate cases
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: evals
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: evals/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate eval cases
+        run: npm run validate-cases
+
+  # ─── Docker Compose validation (Story 4.1) ──────────────────────────────
+  docker-compose:
+    name: Docker Compose — config validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate compose file syntax
+        run: docker compose config --quiet
+
+      - name: Check all images are pinned (no :latest tags)
+        run: |
+          if grep -E "image:.*:latest" docker-compose.yml; then
+            echo "::error::Unpinned image found — replace ':latest' with an explicit version tag"
+            exit 1
+          fi
+          echo "All images are pinned."
+
+      - name: Check .env.example covers all compose env vars
+        run: |
+          # Extract env var names referenced in docker-compose.yml environment blocks
+          compose_vars=$(grep -E "^\s+[A-Z_]+:" docker-compose.yml | sed 's/.*\([A-Z_]\+\):.*/\1/' | sort -u)
+          example_vars=$(grep -E "^[A-Z_]+=" .env.example | sed 's/=.*//' | sort -u)
+          missing=""
+          for var in $compose_vars; do
+            if ! echo "$example_vars" | grep -q "^${var}$"; then
+              missing="$missing $var"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Vars in docker-compose.yml not in .env.example:$missing"
+            exit 1
+          fi
+          echo ".env.example is complete."
+
+  # ─── Conventional commit lint (Story 3.1.2) ─────────────────────────────
+  commitlint:
+    name: Commit lint
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install commitlint
+        run: npm install --no-save @commitlint/cli @commitlint/config-conventional
+
+      - name: Lint PR commits
+        run: |
+          npx commitlint \
+            --from ${{ github.event.pull_request.base.sha }} \
+            --to ${{ github.event.pull_request.head.sha }} \
+            --verbose

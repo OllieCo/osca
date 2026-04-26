@@ -1,0 +1,22 @@
+{
+  "name": "dispatcher-evals",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "eval":           "tsx dispatcher-eval.ts",
+    "eval:ci":        "tsx dispatcher-eval.ts --ci",
+    "eval:baseline":  "tsx dispatcher-eval.ts --baseline",
+    "eval:pii":       "tsx dispatcher-eval.ts --categories pii-guard --ci",
+    "reproducibility": "tsx reproducibility-check.ts",
+    "pii-check":      "tsx pii-check.ts",
+    "audit":          "tsx audit.ts",
+    "validate-cases": "tsx -e \"import { loadAllCases } from './runner.js'; loadAllCases().then(cs => console.log(cs.length + ' cases valid')).catch(e => { console.error(e.message); process.exit(1) })\""
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3",
+    "@types/node": "^20.11.25"
+  }
+}

@@ -1,0 +1,203 @@
+[
+  {
+    "id": "edge-001",
+    "source": "synthetic",
+    "category": "edge-case",
+    "description": "Empty goal string — must return error",
+    "input": {
+      "goal": "",
+      "pageState": null,
+      "rawPageText": "",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^error$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "edge-002",
+    "source": "synthetic",
+    "category": "edge-case",
+    "description": "No page state and no steps — must scrape or navigate first",
+    "input": {
+      "goal": "Click the Save button",
+      "pageState": null,
+      "rawPageText": "",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(navigate|scrape)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "edge-003",
+    "source": "synthetic",
+    "category": "edge-case",
+    "description": "Very long rawPageText (>3000 chars) — must still produce valid action",
+    "input": {
+      "goal": "Record absence for [NAME_001]",
+      "pageState": null,
+      "rawPageText": "Navigation bar: School Management | Timetable | Supervisions | Staff Absences | Engage Supply Teachers | Cover Absences | Reports | Help. Breadcrumb: Home > School Management > Timetable > Supervisions. Supervisions for 01/05/2026. Today's date: Thursday 1 May 2026. Period 1: 08:30-09:30. Period 2: 09:30-10:30. Period 3: 11:00-12:00. Period 4: 12:45-13:45. Period 5: 13:45-14:45. Staff Absences section: [NAME_001] - Absent P1, P2. [NAME_002] - Absent P3. Supply Teachers: [NAME_010]Z available P1-P5. [NAME_011]Z available P2-P4. Cover Absences: 10A MAT - Period 1 - R - Uncovered. 9B SCI - Period 2 - I - Uncovered. 8C ENG - Period 3 - E - Uncovered. Footer: OneSchool v2024.3.1 | Queensland Department of Education | IS18: OFFICIAL:Sensitive | Session expires in 28 minutes. Additional metadata that is very long and goes on and on to test truncation handling in the prompt builder which cuts off at 3000 characters. This text is intentionally long to verify that the system handles truncation gracefully without producing invalid JSON or breaking the action response format. The model should still return a well-formed action even when the raw page text is truncated. More filler text here to ensure we exceed the 3000 character limit that is set in the prompt builder function. This additional content serves no informational purpose beyond testing the truncation boundary. End of long text.",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(navigate|scrape|click|fill|select|check|drag|wait|done|error)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "edge-004",
+    "source": "synthetic",
+    "category": "edge-case",
+    "description": "Ambiguous goal with multiple plausible interpretations — must still return valid action",
+    "input": {
+      "goal": "Do the thing",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": []
+      },
+      "rawPageText": "Supervisions page loaded.",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(navigate|scrape|click|fill|select|check|drag|wait|done|error)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "edge-005",
+    "source": "synthetic",
+    "category": "edge-case",
+    "description": "Goal already complete — all absences covered — must return done",
+    "input": {
+      "goal": "Cover all absences",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": [{ "headers": ["Class", "Status"], "rows": [["10A MAT", "Covered"]], "meta": { "source": "html", "isVirtual": false } }]
+      },
+      "rawPageText": "All rows showing green covered status. No uncovered rows remain.",
+      "steps": [
+        { "id": "s1", "action": { "type": "drag", "description": "Dragged cover badge", "reasoning": "Cover class", "risk": "medium" }, "status": "done", "timestamp": 1 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^done$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "edge-006",
+    "source": "synthetic",
+    "category": "edge-case",
+    "description": "Wrong URL — not on OneSchool — must navigate",
+    "input": {
+      "goal": "Record absence for [NAME_001]",
+      "pageState": {
+        "url": "https://www.google.com",
+        "fields": [],
+        "tableData": []
+      },
+      "rawPageText": "Google search page.",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^navigate$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "edge-007",
+    "source": "synthetic",
+    "category": "edge-case",
+    "description": "Step history shows repeated failures — must not loop infinitely",
+    "input": {
+      "goal": "Record absence for [NAME_001]",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": []
+      },
+      "rawPageText": "Page loaded.",
+      "steps": [
+        { "id": "s1", "action": { "type": "click", "selector": "#missing-btn", "description": "Click missing button", "reasoning": "Try", "risk": "low" }, "status": "failed", "result": "Element not found", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "click", "selector": "#missing-btn", "description": "Retry click", "reasoning": "Retry", "risk": "low" }, "status": "failed", "result": "Element not found", "timestamp": 2 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(scrape|error)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "edge-008",
+    "source": "synthetic",
+    "category": "edge-case",
+    "description": "Empty table data — must scrape rather than act on non-existent rows",
+    "input": {
+      "goal": "Cover all absences",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": []
+      },
+      "rawPageText": "Cover Absences panel open but grid is empty.",
+      "steps": [
+        { "id": "s1", "action": { "type": "click", "description": "Click Cover Absences", "reasoning": "Open panel", "risk": "low" }, "status": "done", "timestamp": 1 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(scrape|done)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "edge-009",
+    "source": "synthetic",
+    "category": "edge-case",
+    "description": "Session expiry warning visible — must still return valid next action",
+    "input": {
+      "goal": "Record absence for [NAME_001]",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": []
+      },
+      "rawPageText": "Warning: Session expires in 2 minutes. Supervisions page loaded.",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(navigate|scrape|click|fill|select|check|drag|wait|done|error)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "edge-010",
+    "source": "synthetic",
+    "category": "edge-case",
+    "description": "Unicode and special characters in rawPageText — must not break JSON output",
+    "input": {
+      "goal": "Record absence",
+      "pageState": null,
+      "rawPageText": "Special chars: <script>alert(1)</script> &amp; RTL-override LSEP NULL-like",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(navigate|scrape|click|fill|select|check|drag|wait|done|error)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  }
+]

@@ -1,0 +1,131 @@
+rules:
+  # ─── PII in logs ────────────────────────────────────────────────────────────
+
+  - id: pii-field-in-console-log
+    patterns:
+      - pattern: console.$METHOD(..., $OBJ.$FIELD, ...)
+      - metavariable-regex:
+          metavariable: $FIELD
+          regex: >-
+            (?i)(name|email|phone|address|dob|dateOfBirth|studentId|staffId|
+            qsn|tfn|abn|medicare|passport|licence|ssn|nationalId|
+            firstName|lastName|fullName|givenName|surname)
+    message: >
+      Possible PII field `$FIELD` passed to console.$METHOD.
+      Log token IDs or category labels only — never raw identifiable values.
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: pii-in-logs
+      confidence: MEDIUM
+
+  - id: req-body-pii-in-log
+    patterns:
+      - pattern: console.$METHOD(..., $REQ.body.$FIELD, ...)
+      - metavariable-regex:
+          metavariable: $FIELD
+          regex: >-
+            (?i)(name|email|phone|goal|message|text|content|rawPageText)
+    message: >
+      Request body field `$FIELD` passed directly to console.$METHOD.
+      Log only metadata (IDs, counts, status codes) — never request body content.
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: pii-in-logs
+      confidence: HIGH
+
+  # ─── Unsafe error leakage ────────────────────────────────────────────────────
+
+  - id: error-stack-in-response
+    patterns:
+      - pattern: res.json({ ..., stack: $ERR.stack, ... })
+    message: >
+      Stack traces expose internal file paths and library versions.
+      Return a generic error message to the client and log the stack server-side only.
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: error-leakage
+
+  - id: error-message-raw-in-response
+    patterns:
+      - pattern: res.json({ error: $ERR.message })
+      - pattern-not: |
+          const msg = err instanceof Error ? err.message : String(err)
+          res.$_(..., { error: msg })
+    message: >
+      Forwarding raw exception messages to API clients may leak internal details.
+      Sanitise or replace with a user-safe message before responding.
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: error-leakage
+
+  # ─── Injection / prototype pollution ────────────────────────────────────────
+
+  - id: unsafe-object-assign-from-body
+    patterns:
+      - pattern: Object.assign($OBJ, $REQ.body)
+    message: >
+      `Object.assign` from an untrusted request body can pollute prototype or
+      overwrite sensitive properties. Use an explicit allow-list or a validated schema.
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: prototype-pollution
+
+  - id: eval-from-request
+    patterns:
+      - pattern: eval($REQ.body.$FIELD)
+      - pattern: new Function($REQ.body.$FIELD)
+    message: >
+      Dynamic code execution using request-body data is a critical injection risk.
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: injection
+
+  # ─── Hardcoded secrets ───────────────────────────────────────────────────────
+
+  - id: hardcoded-secret-assignment
+    patterns:
+      - pattern: const $VAR = "$VALUE"
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: >-
+            (?i)(password|secret|apiKey|api_key|token|privateKey|private_key|
+            clientSecret|authToken|accessKey|accessSecret)
+      - metavariable-regex:
+          metavariable: $VALUE
+          # Must look like a real secret (not a placeholder)
+          regex: "^(?!.*placeholder|.*example|.*your_|.*<|.*>).{8,}$"
+    message: >
+      Possible hardcoded secret in `$VAR`. Use environment variables and
+      never commit credential values to source control.
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: hardcoded-secrets
+
+  # ─── Ollama / inference client safeguards ───────────────────────────────────
+
+  - id: inference-client-direct-call
+    patterns:
+      - pattern: fetch("http://localhost:11434/...")
+      - pattern: fetch(`http://localhost:11434/...`)
+    message: >
+      Call Ollama through `chatWithOllama()` in `lib/inference-client.ts` —
+      not via raw fetch. The client handles timeouts, retries, and response parsing.
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: maintainability
+      subcategory: client-bypass

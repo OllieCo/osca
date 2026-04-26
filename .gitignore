@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Environment files — never commit secrets
+.env
+.env.local
+.env.*.local
+# .env.example is intentionally NOT ignored
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# Claude Code local config
+.claude/
+
+# Test / coverage artefacts
+coverage/
+
+# Eval artefacts
+evals/reports/
+evals/baseline/baseline.json
+sbom.xml

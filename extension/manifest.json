@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Dispatcher Bridge",
+  "version": "0.1.0",
+  "description": "Content script bridge — scrapes OneSchool pages and executes actions from Dispatcher server.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "https://oslp.eq.edu.au/*",
+    "https://oslptrain.eq.edu.au/*",
+    "http://localhost:3001/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://oslp.eq.edu.au/*",
+        "https://oslptrain.eq.edu.au/*"
+      ],
+      "js": ["dist/scraper.js", "dist/actor.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://localhost:3001;"
+  }
+}

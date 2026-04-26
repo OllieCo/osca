@@ -1,0 +1,471 @@
+[
+  {
+    "id": "sup-001",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Record absence: cold start — no page loaded, goal is to record absence",
+    "input": {
+      "goal": "Record absence for [NAME_001] for periods 1 and 2 today",
+      "pageState": null,
+      "rawPageText": "",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(navigate|scrape)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-002",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Record absence: on Supervisions page, click Staff Absences icon",
+    "input": {
+      "goal": "Record absence for [NAME_001] for periods 1 and 2 today",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": []
+      },
+      "rawPageText": "School Management | Timetable | Supervisions | Staff Absences | Engage Supply Teachers | Cover Absences",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "target": "https://oneschool.eq.edu.au/supervision", "description": "Navigate to Supervisions", "reasoning": "Start here", "risk": "low" }, "status": "done", "timestamp": 1 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^click$" },
+      { "type": "regex", "field": "risk", "pattern": "^(low|medium)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-003",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Record absence: type teacher name into search field",
+    "input": {
+      "goal": "Record absence for [NAME_001] for periods 1 and 2 today",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [{ "label": "Search", "tokenizedValue": "" }],
+        "tableData": []
+      },
+      "rawPageText": "Add absence dialog open. Search field visible.",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "description": "Navigate to Supervisions", "reasoning": "Start", "risk": "low" }, "status": "done", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "click", "selector": "button[title*='Add']", "description": "Click Add button", "reasoning": "Open add dialog", "risk": "low" }, "status": "done", "timestamp": 2 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^fill$" },
+      { "type": "regex", "field": "risk", "pattern": "^(low|medium)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-004",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Record absence: autocomplete results appear, select the matching teacher",
+    "input": {
+      "goal": "Record absence for [NAME_001] for periods 1 and 2 today",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [{ "label": "Search", "tokenizedValue": "[NAME_001]" }],
+        "tableData": []
+      },
+      "rawPageText": "Autocomplete dropdown showing: [NAME_001] - Teacher",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "description": "Navigate to Supervisions", "reasoning": "Start", "risk": "low" }, "status": "done", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "click", "description": "Click Add", "reasoning": "Open dialog", "risk": "low" }, "status": "done", "timestamp": 2 },
+        { "id": "s3", "action": { "type": "fill", "description": "Type teacher name in search", "reasoning": "Find teacher", "risk": "low" }, "status": "done", "timestamp": 3 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(click|scrape)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-005",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Record absence: tick period 1 checkbox first (so reason applies to all)",
+    "input": {
+      "goal": "Record absence for [NAME_001] for periods 1 and 2 today",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": []
+      },
+      "rawPageText": "Period checkboxes: P1 [ ] P2 [ ] P3 [ ] P4 [ ]. Absence Reason dropdown visible.",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "description": "Navigate", "reasoning": "Start", "risk": "low" }, "status": "done", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "click", "description": "Click Add", "reasoning": "Open dialog", "risk": "low" }, "status": "done", "timestamp": 2 },
+        { "id": "s3", "action": { "type": "fill", "description": "Type name", "reasoning": "Search", "risk": "low" }, "status": "done", "timestamp": 3 },
+        { "id": "s4", "action": { "type": "click", "description": "Select autocomplete", "reasoning": "Pick teacher", "risk": "low" }, "status": "done", "timestamp": 4 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^check$" },
+      { "type": "regex", "field": "selector", "pattern": "checkbox|input" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-006",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Record absence: save after selecting reason",
+    "input": {
+      "goal": "Record absence for [NAME_001] for periods 1 and 2 today",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [{ "label": "Absence Reason", "tokenizedValue": "Sick Leave" }],
+        "tableData": []
+      },
+      "rawPageText": "P1 [x] P2 [x] Reason: Sick Leave. Save button visible.",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "description": "Navigate", "reasoning": "Start", "risk": "low" }, "status": "done", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "click", "description": "Click Add", "reasoning": "Open", "risk": "low" }, "status": "done", "timestamp": 2 },
+        { "id": "s3", "action": { "type": "fill", "description": "Type name", "reasoning": "Search", "risk": "low" }, "status": "done", "timestamp": 3 },
+        { "id": "s4", "action": { "type": "click", "description": "Select teacher", "reasoning": "Pick", "risk": "low" }, "status": "done", "timestamp": 4 },
+        { "id": "s5", "action": { "type": "check", "description": "Tick P1", "reasoning": "Period 1", "risk": "medium" }, "status": "done", "timestamp": 5 },
+        { "id": "s6", "action": { "type": "check", "description": "Tick P2", "reasoning": "Period 2", "risk": "medium" }, "status": "done", "timestamp": 6 },
+        { "id": "s7", "action": { "type": "select", "description": "Select reason", "reasoning": "Set reason", "risk": "medium" }, "status": "done", "timestamp": 7 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^click$" },
+      { "type": "regex", "field": "risk", "pattern": "^high$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-007",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Engage supply teacher: cold start goal",
+    "input": {
+      "goal": "Engage supply teacher for [NAME_002] absence in periods 3 and 4",
+      "pageState": null,
+      "rawPageText": "",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(navigate|scrape)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-008",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Engage supply teacher: click Engage Supply Teachers button",
+    "input": {
+      "goal": "Engage supply teacher for [NAME_002] absence in periods 3 and 4",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": []
+      },
+      "rawPageText": "Supervisions page. Staff Absences | Engage Supply Teachers | Cover Absences buttons visible.",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "description": "Navigate to Supervisions", "reasoning": "Start", "risk": "low" }, "status": "done", "timestamp": 1 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^click$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-009",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Engage supply teacher: click Engage icon on supply staff row",
+    "input": {
+      "goal": "Engage supply teacher for [NAME_002] absence in periods 3 and 4",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": [{ "headers": ["Name", "Available", "Action"], "rows": [["[NAME_003]Z", "P3, P4", "Engage"]], "meta": { "source": "html", "isVirtual": false } }]
+      },
+      "rawPageText": "Supply teachers available. [NAME_003]Z available periods 3 and 4. Engage button visible.",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "description": "Navigate", "reasoning": "Start", "risk": "low" }, "status": "done", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "click", "description": "Click Engage Supply Teachers", "reasoning": "Open panel", "risk": "low" }, "status": "done", "timestamp": 2 },
+        { "id": "s3", "action": { "type": "click", "description": "Click (+)", "reasoning": "Add supply", "risk": "low" }, "status": "done", "timestamp": 3 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^click$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-010",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Cover classes: cold start — cover drag workflow",
+    "input": {
+      "goal": "Cover all absences for today",
+      "pageState": null,
+      "rawPageText": "",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(navigate|scrape)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-011",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Cover classes: rows visible, drag R badge onto cover-staff cell",
+    "input": {
+      "goal": "Cover all absences for today",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": [{ "headers": ["Class", "Cover Type", "Cover Staff"], "rows": [["10A MAT", "R", ""]], "meta": { "source": "kendo", "isVirtual": false } }]
+      },
+      "rawPageText": "Cover Absences grid. R badge on row 10A MAT. Cover staff cell empty. All rows need covering.",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "description": "Navigate", "reasoning": "Start", "risk": "low" }, "status": "done", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "click", "description": "Click Cover Absences", "reasoning": "Open panel", "risk": "low" }, "status": "done", "timestamp": 2 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^drag$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-012",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Cover notes: add cover note for a class",
+    "input": {
+      "goal": "Add cover note for class 10A MAT: students are working on page 45",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": [{ "headers": ["Class", "Note"], "rows": [["10A MAT", ""]], "meta": { "source": "html", "isVirtual": false } }]
+      },
+      "rawPageText": "Class 10A MAT. Hover over class-code cell shows pencil icon.",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(click|scrape)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-013",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Done signal: all absences recorded, all covered — should return done",
+    "input": {
+      "goal": "Record and cover all absences for today",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": [{ "headers": ["Class", "Status"], "rows": [["10A MAT", "Covered"], ["9B SCI", "Covered"]], "meta": { "source": "html", "isVirtual": false } }]
+      },
+      "rawPageText": "All rows green. Cover complete.",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "description": "Navigate", "reasoning": "Start", "risk": "low" }, "status": "done", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "click", "description": "Open absences", "reasoning": "Record", "risk": "low" }, "status": "done", "timestamp": 2 },
+        { "id": "s3", "action": { "type": "drag", "description": "Drag cover badge", "reasoning": "Cover class", "risk": "medium" }, "status": "done", "timestamp": 3 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^done$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-014",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Error case: teacher not found in search — should return error",
+    "input": {
+      "goal": "Record absence for [NAME_004]",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [{ "label": "Search", "tokenizedValue": "[NAME_004]" }],
+        "tableData": []
+      },
+      "rawPageText": "Name search returned no results.",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "description": "Navigate", "reasoning": "Start", "risk": "low" }, "status": "done", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "click", "description": "Click Add", "reasoning": "Open dialog", "risk": "low" }, "status": "done", "timestamp": 2 },
+        { "id": "s3", "action": { "type": "fill", "description": "Type name", "reasoning": "Search", "risk": "low" }, "status": "done", "timestamp": 3 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^error$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-015",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "After Save: wait for loading mask to clear before next action",
+    "input": {
+      "goal": "Record absence for [NAME_001] for period 1",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": []
+      },
+      "rawPageText": "Loading... k-loading-mask visible.",
+      "steps": [
+        { "id": "s1", "action": { "type": "click", "description": "Click Save", "reasoning": "Save absence", "risk": "high" }, "status": "done", "timestamp": 1 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^(wait|scrape)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-016",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Uncertain selector — should scrape before acting",
+    "input": {
+      "goal": "Add a cover note for class 9B SCI",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": []
+      },
+      "rawPageText": "Supervisions page loaded but layout unclear. Multiple grids visible.",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^scrape$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-017",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Multi-period absence: after P1 ticked, tick P2",
+    "input": {
+      "goal": "Record absence for [NAME_001] for periods 1, 2 and 3",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [],
+        "tableData": []
+      },
+      "rawPageText": "P1 [x] P2 [ ] P3 [ ]. Reason dropdown not yet selected.",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "description": "Navigate", "reasoning": "Start", "risk": "low" }, "status": "done", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "click", "description": "Click Add", "reasoning": "Open", "risk": "low" }, "status": "done", "timestamp": 2 },
+        { "id": "s3", "action": { "type": "fill", "description": "Type name", "reasoning": "Search", "risk": "low" }, "status": "done", "timestamp": 3 },
+        { "id": "s4", "action": { "type": "click", "description": "Select teacher", "reasoning": "Pick", "risk": "low" }, "status": "done", "timestamp": 4 },
+        { "id": "s5", "action": { "type": "check", "description": "Tick P1", "reasoning": "First", "risk": "medium" }, "status": "done", "timestamp": 5 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^check$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-018",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Supply teacher: set Replacing dropdown after engaging",
+    "input": {
+      "goal": "Engage supply teacher replacing [NAME_002] in period 3",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [{ "label": "Replacing", "tokenizedValue": "" }],
+        "tableData": []
+      },
+      "rawPageText": "Supply period P3 ticked. Replacing dropdown empty and visible.",
+      "steps": [
+        { "id": "s1", "action": { "type": "navigate", "description": "Navigate", "reasoning": "Start", "risk": "low" }, "status": "done", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "click", "description": "Engage Supply Teachers", "reasoning": "Open panel", "risk": "low" }, "status": "done", "timestamp": 2 },
+        { "id": "s3", "action": { "type": "click", "description": "Click (+)", "reasoning": "Add", "risk": "low" }, "status": "done", "timestamp": 3 },
+        { "id": "s4", "action": { "type": "click", "description": "Click Engage icon", "reasoning": "Engage", "risk": "medium" }, "status": "done", "timestamp": 4 },
+        { "id": "s5", "action": { "type": "check", "description": "Tick P3", "reasoning": "Period", "risk": "medium" }, "status": "done", "timestamp": 5 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^select$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-019",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Cover note: fill the cover note textarea",
+    "input": {
+      "goal": "Add cover note for class 10A MAT: students are working on page 45",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [{ "label": "Cover Note", "tokenizedValue": "" }],
+        "tableData": []
+      },
+      "rawPageText": "Cover note popup open. Textarea visible. Instruction dropdown set.",
+      "steps": [
+        { "id": "s1", "action": { "type": "click", "description": "Click pencil icon", "reasoning": "Open note editor", "risk": "low" }, "status": "done", "timestamp": 1 },
+        { "id": "s2", "action": { "type": "select", "description": "Select instruction", "reasoning": "Set instruction", "risk": "low" }, "status": "done", "timestamp": 2 }
+      ]
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^fill$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  },
+  {
+    "id": "sup-020",
+    "source": "synthetic",
+    "category": "supervision",
+    "description": "Risk level: data entry (fill) should be medium risk",
+    "input": {
+      "goal": "Record absence for [NAME_001]",
+      "pageState": {
+        "url": "https://oneschool.eq.edu.au/supervision",
+        "fields": [{ "label": "Search", "tokenizedValue": "" }],
+        "tableData": []
+      },
+      "rawPageText": "Add absence dialog. Search field visible.",
+      "steps": []
+    },
+    "assertions": [
+      { "type": "structural", "required_fields": ["type", "description", "reasoning", "risk"] },
+      { "type": "regex", "field": "type", "pattern": "^fill$" },
+      { "type": "regex", "field": "risk", "pattern": "^(low|medium)$" }
+    ],
+    "metadata": { "created": "2026-05-01", "pii_checked": true, "reviewer": null }
+  }
+]

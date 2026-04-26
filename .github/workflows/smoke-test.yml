@@ -1,0 +1,114 @@
+name: Smoke Test
+
+on:
+  # Trigger manually or as part of the staging promotion gate
+  workflow_dispatch:
+  # Also runs automatically when a release-please PR merges to main
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - "client/**"
+      - "docker-compose.yml"
+      - ".env.example"
+
+# Prevent concurrent smoke tests — only one stack at a time on the runner
+concurrency:
+  group: smoke-test
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Integration smoke test
+    # Self-hosted runner required: has Docker, GPU for Ollama, and persistent model cache
+    runs-on: [self-hosted, linux, dispatcher]
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Prepare env file (smoke test values) ─────────────────────────────
+      - name: Write smoke test .env
+        run: |
+          cat > server/.env << 'EOF'
+          NODE_ENV=test
+          DISPATCHER_ENV=dev
+          PORT=3001
+          CORS_ORIGIN=http://localhost:5173
+          DATABASE_URL=postgresql://dispatcher:dispatcher@localhost:5432/dispatcher_dev
+          REDIS_URL=redis://localhost:6379
+          OLLAMA_BASE_URL=http://localhost:11434
+          EOF
+
+      # ── Start the stack ───────────────────────────────────────────────────
+      - name: Start Docker stack
+        run: docker compose up -d --build --wait
+        timeout-minutes: 10
+
+      # ── Health checks ─────────────────────────────────────────────────────
+      - name: Ping API health endpoint
+        run: |
+          for i in $(seq 1 12); do
+            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost:3001/api/health || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "API healthy (attempt $i)"
+              break
+            fi
+            echo "Attempt $i: API returned $STATUS, retrying in 5s..."
+            sleep 5
+            if [ $i -eq 12 ]; then
+              echo "::error::API health check failed after 60s"
+              exit 1
+            fi
+          done
+
+      - name: Ping Postgres via API
+        run: |
+          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost:3001/api/health || echo "000")
+          [ "$STATUS" = "200" ] || (echo "::error::API (Postgres dependency) not healthy"; exit 1)
+
+      - name: Ping Redis
+        run: docker compose exec redis redis-cli ping | grep -q PONG
+
+      - name: Ping Ollama
+        run: |
+          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost:11434/ || echo "000")
+          [ "$STATUS" = "200" ] || (echo "::warning::Ollama not responding — may still be loading model"; true)
+
+      # ── Collect health report ─────────────────────────────────────────────
+      - name: Collect health report
+        if: always()
+        run: |
+          mkdir -p smoke-report
+          echo "# Smoke Test Report — $(date -u +%Y-%m-%dT%H:%M:%SZ)" > smoke-report/report.md
+          echo "" >> smoke-report/report.md
+          echo "## Service health" >> smoke-report/report.md
+          echo "| Service | Status |" >> smoke-report/report.md
+          echo "|---|---|" >> smoke-report/report.md
+
+          api_status=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost:3001/api/health 2>/dev/null || echo "FAIL")
+          ollama_status=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost:11434/ 2>/dev/null || echo "FAIL")
+          redis_status=$(docker compose exec redis redis-cli ping 2>/dev/null | tr -d '\r' || echo "FAIL")
+          pg_status=$(docker compose exec postgres pg_isready -U dispatcher -d dispatcher_dev 2>/dev/null | grep -q "accepting" && echo "200" || echo "FAIL")
+
+          echo "| API (Express) | $api_status |" >> smoke-report/report.md
+          echo "| Postgres | $pg_status |" >> smoke-report/report.md
+          echo "| Redis | $redis_status |" >> smoke-report/report.md
+          echo "| Ollama | $ollama_status |" >> smoke-report/report.md
+
+          echo "" >> smoke-report/report.md
+          echo "## Container logs (last 20 lines each)" >> smoke-report/report.md
+          docker compose logs --tail=20 >> smoke-report/report.md 2>&1
+
+      - name: Upload smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report-${{ github.sha }}
+          path: smoke-report/
+          retention-days: 14
+
+      # ── Teardown (Story 4.3.4) ────────────────────────────────────────────
+      - name: Tear down Docker stack
+        if: always()
+        run: docker compose down -v --remove-orphans

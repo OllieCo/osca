@@ -1,0 +1,36 @@
+# Gitleaks configuration — allowances for known non-secret patterns
+# Run: gitleaks detect --config .gitleaks.toml --source .
+# CI: gitleaks-action@v2 auto-discovers this file
+
+title = "Dispatcher Gitleaks Config"
+
+[extend]
+# Extend the default ruleset
+useDefault = true
+
+[allowlist]
+description = "Known safe patterns and test fixtures"
+
+# Paths that are never scanned for secrets
+paths = [
+  ".gitleaks.toml",
+  "evals/baseline",           # Eval baseline files contain LLM output, not secrets
+  "docs",                     # Markdown docs may reference placeholder values
+]
+
+# Regex patterns that are always safe regardless of rule match
+regexes = [
+  # Placeholder / example values in .env.example and docs
+  '''your[-_]?api[-_]?key[-_]?here''',
+  '''your[-_]?token[-_]?here''',
+  '''example\.com''',
+  # Test assertion strings (e.g. "REDACTED", "[redacted]")
+  '''\[redacted\]''',
+  '''REDACTED''',
+  # OpenTelemetry attribute strings that look like tokens but aren't
+  '''GRAFANA_OTLP_TOKEN''',
+  '''SENTRY_DSN''',
+]
+
+# Specific commits to ignore (e.g. if a test fixture was intentionally committed)
+# commits = []

@@ -1,0 +1,137 @@
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly full scan — Saturday 02:00 UTC
+    - cron: "0 2 * * 6"
+
+jobs:
+  # ─── Story 1.1: Dependency & supply-chain hygiene ─────────────────────────
+  dependency-audit:
+    name: CVE Audit
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package-dir: [server, client, evals]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ${{ matrix.package-dir }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.package-dir }}
+        run: npm ci
+
+      - name: CVE audit (fail on high/critical)
+        working-directory: ${{ matrix.package-dir }}
+        run: npm audit --audit-level=high
+
+      - name: Lockfile integrity check
+        working-directory: ${{ matrix.package-dir }}
+        # Ensures no transitive upgrades snuck in outside the lock file
+        run: npm ci --prefer-offline
+
+  licence-check:
+    name: Licence Scan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package-dir: [server, client, evals]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.package-dir }}
+        run: npm ci
+
+      - name: Check licences (reject viral copyleft)
+        working-directory: ${{ matrix.package-dir }}
+        run: |
+          npx license-checker \
+            --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;CC0-1.0;Unlicense;0BSD;BlueOak-1.0.0;Python-2.0" \
+            --excludePrivatePackages \
+            --excludePackages "dispatcher-server;dispatcher-evals"
+
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    # Only generate SBOM on main branch pushes (i.e. releases)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install server deps
+        working-directory: server
+        run: npm ci
+
+      - name: Generate CycloneDX SBOM
+        uses: CycloneDX/gh-node-module-generatebom@v1
+        with:
+          path: "./server"
+          output: "./sbom.xml"
+
+      - name: Upload SBOM artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: sbom.xml
+          retention-days: 90
+
+  # ─── Story 1.2: SAST + secret scanning ────────────────────────────────────
+  sast:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run SAST — OWASP Top 10 + Dispatcher custom rules
+        run: |
+          semgrep \
+            --config p/owasp-top-ten \
+            --config p/typescript \
+            --config p/nodejs \
+            --config .semgrep/rules/ \
+            --error \
+            --json \
+            --output semgrep-results.json \
+            server/src/ evals/
+
+      - name: Upload SAST results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-${{ github.sha }}
+          path: semgrep-results.json
+          retention-days: 30
+
+  secret-scan:
+    name: Secret Scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history required for historical secret scan
+          fetch-depth: 0
+
+      - name: Gitleaks — scan full history for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

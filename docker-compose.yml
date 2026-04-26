@@ -1,0 +1,92 @@
+services:
+
+  # ── Dispatcher Express API ─────────────────────────────────────────────────
+  api:
+    build:
+      context: ./server
+      target: production
+    env_file: ./server/.env
+    environment:
+      NODE_ENV: development
+      DISPATCHER_ENV: dev
+      PORT: "3001"
+      CORS_ORIGIN: http://localhost:5173
+      OLLAMA_BASE_URL: http://ollama:11434
+      DATABASE_URL: postgresql://dispatcher:dispatcher@postgres:5432/dispatcher_dev
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── React SPA (dev: use `npm run dev` directly; this is for compose smoke test)
+  client:
+    build:
+      context: ./client
+      target: production
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dispatcher
+      POSTGRES_PASSWORD: dispatcher
+      POSTGRES_DB: dispatcher_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dispatcher -d dispatcher_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Ollama (local inference) ───────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:0.9.0
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    # GPU passthrough (uncomment if host has NVIDIA GPU):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_data:

@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GET /api/health response",
+  "type": "object",
+  "required": ["ok", "env", "ollama", "models", "ts"],
+  "properties": {
+    "ok":     { "type": "boolean" },
+    "env":    { "type": "string", "enum": ["dev", "staging", "prod"] },
+    "ollama": { "type": "boolean" },
+    "models": { "type": "array", "items": { "type": "string" } },
+    "ts":     { "type": "number" }
+  },
+  "additionalProperties": false
+}
