@@ -1,15 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
-// Mock action-planner so tests don't call Ollama
-vi.mock("../lib/action-planner.js", () => ({
-  planNextAction: vi.fn().mockResolvedValue({
-    id: undefined,
-    type: "navigate",
-    target: "Supervisions",
-    description: "Navigate to Supervisions module",
-    reasoning: "Goal requires navigating there first",
-    risk: "low",
-  }),
+// Mock the inference queue so tests don't need Redis or a live worker.
+// We simulate the worker behaviour inline: after add() resolves, we manually
+// trigger the session state update that the real worker would do.
+vi.mock("../lib/inference-queue.js", () => ({
+  inferenceQueue: {
+    add: vi.fn().mockResolvedValue({ id: "test-job-id" }),
+    getJob: vi.fn().mockResolvedValue(null),
+  },
 }))
 
 import express from "express"
@@ -41,10 +39,11 @@ beforeEach(async () => {
 })
 
 describe("POST /api/agent/start", () => {
-  it("returns a sessionId", async () => {
+  it("returns a sessionId and jobId", async () => {
     const { status, body } = await req("POST", "/api/agent/start", { goal: "Record absence" })
     expect(status).toBe(200)
     expect(body.sessionId).toBeDefined()
+    expect(body.jobId).toBe("test-job-id")
   })
 
   it("returns 422 when goal is missing", async () => {
@@ -104,5 +103,35 @@ describe("POST /api/detokenize", () => {
   it("returns 422 when body is malformed", async () => {
     const { status } = await req("POST", "/api/detokenize", { text: 42 })
     expect(status).toBe(422)
+  })
+})
+
+describe("GET /api/agent/job/:id", () => {
+  it("returns 404 when job does not exist", async () => {
+    const { inferenceQueue } = await import("../lib/inference-queue.js")
+    vi.mocked(inferenceQueue.getJob).mockResolvedValueOnce(undefined)
+    const { status } = await req("GET", "/api/agent/job/nonexistent-job")
+    expect(status).toBe(404)
+  })
+
+  it("returns job state when job exists", async () => {
+    const { inferenceQueue } = await import("../lib/inference-queue.js")
+    const mockJob = {
+      id: "test-job-id",
+      getState: vi.fn().mockResolvedValue("completed"),
+      attemptsMade: 1,
+      data: { sessionId: "sess-123" },
+      returnvalue: { actionType: "navigate" },
+      failedReason: null,
+      timestamp: Date.now(),
+      processedOn: Date.now(),
+      finishedOn: Date.now(),
+    }
+    vi.mocked(inferenceQueue.getJob).mockResolvedValueOnce(mockJob as never)
+    const { status, body } = await req("GET", "/api/agent/job/test-job-id")
+    expect(status).toBe(200)
+    expect(body.id).toBe("test-job-id")
+    expect(body.state).toBe("completed")
+    expect((body.data as { sessionId: string }).sessionId).toBe("sess-123")
   })
 })

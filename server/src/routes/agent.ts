@@ -1,14 +1,12 @@
 import { Router } from "express"
 import type { Request, Response } from "express"
 import { v4 as uuidv4 } from "uuid"
-import { planNextAction } from "../lib/action-planner.js"
 import type { AgentSession, AgentAction, ScrapedRecord } from "../types/index.js"
 import { validateBody, AgentStartBody, AgentActionResultBody, ScrapeBody } from "../lib/validate.js"
+import { sessions } from "../lib/session-store.js"
+import { inferenceQueue } from "../lib/inference-queue.js"
 
 const router = Router()
-
-// In-memory session store — sufficient for local PoC
-const sessions = new Map<string, AgentSession>()
 
 // POST /api/agent/start — client starts a new agent run
 router.post("/agent/start", validateBody(AgentStartBody), async (req: Request, res: Response) => {
@@ -25,13 +23,9 @@ router.post("/agent/start", validateBody(AgentStartBody), async (req: Request, r
   }
   sessions.set(session.id, session)
 
-  // Plan the first action async — content script will poll for it
-  planFirstAction(session).catch((err: unknown) => {
-    session.status = "failed"
-    session.error = err instanceof Error ? err.message : String(err)
-  })
+  const job = await inferenceQueue.add("plan", { sessionId: session.id })
 
-  res.json({ sessionId: session.id })
+  res.json({ sessionId: session.id, jobId: job.id })
 })
 
 // GET /api/agent/status — client polls for UI updates
@@ -93,13 +87,32 @@ router.post("/agent/action-result", validateBody(AgentActionResultBody), async (
     }
   }
 
-  // Plan next action
+  // Plan next action via queue
   session.status = "planning"
-  res.json({ ok: true })
+  const job = await inferenceQueue.add("plan", { sessionId: session.id })
 
-  planNextStep(session).catch((err: unknown) => {
-    session.status = "failed"
-    session.error = err instanceof Error ? err.message : String(err)
+  res.json({ ok: true, jobId: job.id })
+})
+
+// GET /api/agent/job/:id — poll BullMQ job state (useful for diagnostics)
+router.get("/agent/job/:id", async (req: Request, res: Response) => {
+  const job = await inferenceQueue.getJob(req.params.id)
+  if (!job) {
+    res.status(404).json({ error: "job not found" })
+    return
+  }
+
+  const state = await job.getState()
+  res.json({
+    id: job.id,
+    state,
+    attemptsMade: job.attemptsMade,
+    data: { sessionId: job.data.sessionId },  // sessionId only — no PII
+    returnvalue: job.returnvalue ?? null,
+    failedReason: job.failedReason ?? null,
+    timestamp: job.timestamp,
+    processedOn: job.processedOn ?? null,
+    finishedOn: job.finishedOn ?? null,
   })
 })
 
@@ -118,20 +131,6 @@ router.post("/scrape", validateBody(ScrapeBody), (req: Request, res: Response) =
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-async function planFirstAction(session: AgentSession): Promise<void> {
-  const action = await planNextAction(session.goal, session.currentPage, session.steps)
-  action.id = uuidv4()
-  session.pendingAction = action
-  session.status = "awaiting"
-}
-
-async function planNextStep(session: AgentSession): Promise<void> {
-  const action = await planNextAction(session.goal, session.currentPage, session.steps)
-  action.id = uuidv4()
-  session.pendingAction = action
-  session.status = "awaiting"
-}
 
 function getSession(req: Request, res: Response): AgentSession | null {
   const sessionId = (req.query.sessionId ?? req.body?.sessionId) as string | undefined
