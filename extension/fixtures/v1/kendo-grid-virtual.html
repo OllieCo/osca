@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+  Fixture: kendo-grid-virtual.html  (v1)
+  Source:  Observed structure from OneSchool TRAIN — large absence/duty lists
+           that use virtual scrolling (RecyclableScroller pattern).
+  Purpose: Tests virtual-scroll grid detection and initial-capture path.
+           In jsdom scrollTop/clientHeight/scrollHeight are all 0, so the
+           scroll loop immediately detects atBottom=true (0+0 >= 0-2) and
+           exits after one capture pass — which is the intended test scenario.
+  Version: Kendo UI for jQuery 2023.x
+-->
+<html lang="en">
+<head><meta charset="UTF-8"><title>OneSchool — Virtual Grid (fixture)</title></head>
+<body>
+
+<!-- ── Virtual Scroll Kendo Grid ──────────────────────────────────────── -->
+<div class="k-grid" id="absenceGrid" data-role="grid">
+
+  <!-- Header -->
+  <div class="k-grid-header">
+    <div class="k-grid-header-wrap">
+      <table role="grid">
+        <thead role="rowgroup">
+          <tr role="row">
+            <th class="k-header" role="columnheader" scope="col">
+              <span class="k-column-title">Date</span>
+            </th>
+            <th class="k-header" role="columnheader" scope="col">
+              <span class="k-column-title">Student Name</span>
+            </th>
+            <th class="k-header" role="columnheader" scope="col">
+              <span class="k-column-title">Class</span>
+            </th>
+            <th class="k-header" role="columnheader" scope="col">
+              <span class="k-column-title">Reason</span>
+            </th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+  </div>
+
+  <!-- Virtual scroll container — presence signals virtual mode -->
+  <div class="k-virtual-scrollable-wrap" style="overflow:auto;height:300px;">
+    <table role="grid">
+      <tbody role="rowgroup">
+        <tr role="row">
+          <td>2026-05-01</td>
+          <td>[NAME_001]</td>
+          <td>7B</td>
+          <td>Illness</td>
+        </tr>
+        <tr role="row">
+          <td>2026-05-01</td>
+          <td>[NAME_002]</td>
+          <td>9A</td>
+          <td>Family</td>
+        </tr>
+        <tr role="row">
+          <td>2026-05-02</td>
+          <td>[NAME_003]</td>
+          <td>11C</td>
+          <td>Medical</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pager with > 1 page to confirm hasMore detection -->
+  <div class="k-pager-wrap k-grid-pager" role="navigation">
+    <span class="k-pager-info k-label">1 - 20 of 150 items</span>
+  </div>
+
+</div>
+
+</body>
+</html>

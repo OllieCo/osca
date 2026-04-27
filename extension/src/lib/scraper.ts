@@ -1,16 +1,27 @@
-// OneSchool selector reference:
-//   Kendo grid:      .k-grid > .k-grid-header th.k-header > .k-column-title
-//   Kendo pager:     .k-pager-wrap .k-pager-info  ("1 - 20 of 150 items")
-//   Kendo content:   .k-grid-content, .k-virtual-scrollable-wrap
-//   Kendo dropdown:  .k-dropdownlist[aria-label*="..."]
-//   Kendo popup:     .k-animation-container .k-list-item
-//   Absence add btn: button[title*="Add"]
-//   Name search:     input[placeholder*="name"]
-//   Period checks:   .k-grid tbody input[type="checkbox"]
-//   Absence reason:  .k-dropdownlist[aria-label*="reason"]
-//   Save:            button[type="submit"]
+// OneSchool scraping functions — Kendo grid, HTML table, and form field extraction.
+//
+// All CSS selectors are imported from selectors.ts (DOM Resilience Epic 1 Story 1.1).
+// Add a selector there before using it here.
 
 import type { ScrapedField, ScrapedTable, TableMeta, PageInfo, FieldType } from "../types/index"
+import {
+  KENDO_GRID,
+  KENDO_DETAIL_CELL,
+  KENDO_HEADER_CELLS,
+  KENDO_COLUMN_TITLE,
+  KENDO_HIERARCHY_CELL,
+  KENDO_PAGER_INFO,
+  KENDO_CONTENT_AREA,
+  KENDO_GRID_CONTENT,
+  KENDO_VIRTUAL_WRAP,
+  KENDO_DATA_ROWS,
+  KENDO_EXCLUDED_CELLS,
+  KENDO_LOADING_MASK,
+  FORM_LABEL_FOR,
+  FORM_DL_DT,
+  FORM_DL_DD,
+  FORM_TABLE_ROW,
+} from "./selectors"
 
 // ─── PII Classification ───────────────────────────────────────────────────────
 
@@ -51,17 +62,16 @@ export function classifyField(label: string, value: string): FieldType {
 
 function extractKendoHeaders(grid: Element): string[] {
   const headers: string[] = []
-  grid.querySelectorAll(".k-grid-header th.k-header").forEach((th) => {
-    if (th.classList.contains("k-hierarchy-cell")) return
-    const title = (th.querySelector(".k-column-title") ?? th).textContent?.trim() ?? ""
+  grid.querySelectorAll(KENDO_HEADER_CELLS.selector).forEach((th) => {
+    if (th.classList.contains(KENDO_HIERARCHY_CELL.selector.replace(".", ""))) return
+    const title = (th.querySelector(KENDO_COLUMN_TITLE.selector) ?? th).textContent?.trim() ?? ""
     if (title) headers.push(title)
   })
   return headers
 }
 
 function extractKendoPager(grid: Element): PageInfo | undefined {
-  const infoText = grid.querySelector(".k-pager-wrap .k-pager-info, .k-grid-pager .k-pager-info")
-    ?.textContent?.trim() ?? ""
+  const infoText = grid.querySelector(KENDO_PAGER_INFO.selector)?.textContent?.trim() ?? ""
   const match = infoText.match(/(\d[\d,]*)\s*-\s*(\d[\d,]*)\s*of\s*(\d[\d,]*)/i)
   if (!match) return undefined
   const parse = (s: string) => parseInt(s.replace(/,/g, ""), 10)
@@ -70,14 +80,17 @@ function extractKendoPager(grid: Element): PageInfo | undefined {
 
 function extractKendoRows(grid: Element, headers: string[], tokenizeFn: (v: string, t: FieldType) => string): string[][] {
   const rows: string[][] = []
-  const contentEl = grid.querySelector(".k-grid-content, .k-virtual-scrollable-wrap")
+  const contentEl = grid.querySelector(KENDO_CONTENT_AREA.selector)
   if (!contentEl) return rows
 
-  contentEl.querySelectorAll("tbody tr:not(.k-grouping-row):not(.k-detail-row):not(.k-no-data)").forEach((tr) => {
+  contentEl.querySelectorAll(KENDO_DATA_ROWS.selector).forEach((tr) => {
     const cells: string[] = []
     let col = 0
     tr.querySelectorAll("td").forEach((td) => {
-      if (td.classList.contains("k-hierarchy-cell") || td.classList.contains("k-group-cell")) return
+      if (
+        td.classList.contains("k-hierarchy-cell") ||
+        td.classList.contains("k-group-cell")
+      ) return
       const raw = td.textContent?.trim() ?? ""
       cells.push(raw ? tokenizeFn(raw, classifyField(headers[col] ?? "", raw)) : "")
       col++
@@ -90,13 +103,16 @@ function extractKendoRows(grid: Element, headers: string[], tokenizeFn: (v: stri
 // ─── Virtual Scroll Accumulation ─────────────────────────────────────────────
 
 function extractRawRows(grid: Element): string[][] {
-  const contentEl = grid.querySelector(".k-grid-content, .k-virtual-scrollable-wrap")
+  const contentEl = grid.querySelector(KENDO_CONTENT_AREA.selector)
   if (!contentEl) return []
   const rows: string[][] = []
-  contentEl.querySelectorAll("tbody tr:not(.k-grouping-row):not(.k-detail-row):not(.k-no-data)").forEach((tr) => {
+  contentEl.querySelectorAll(KENDO_DATA_ROWS.selector).forEach((tr) => {
     const cells: string[] = []
     tr.querySelectorAll("td").forEach((td) => {
-      if (td.classList.contains("k-hierarchy-cell") || td.classList.contains("k-group-cell")) return
+      if (
+        td.classList.contains("k-hierarchy-cell") ||
+        td.classList.contains("k-group-cell")
+      ) return
       cells.push(td.textContent?.trim() ?? "")
     })
     if (cells.some((c) => c !== "")) rows.push(cells)
@@ -108,7 +124,7 @@ function waitForKendoIdleMs(grid: Element, timeoutMs = 1500): Promise<void> {
   return new Promise((resolve) => {
     const start = Date.now()
     const check = () => {
-      const mask = grid.querySelector(".k-loading-mask")
+      const mask = grid.querySelector(KENDO_LOADING_MASK.selector)
       const idle = !mask || getComputedStyle(mask).display === "none" || !mask.isConnected
       if (idle || Date.now() - start >= timeoutMs) resolve()
       else setTimeout(check, 100)
@@ -125,7 +141,7 @@ export async function scrollAndAccumulateRows(
   tokenizeFn: (v: string, t: FieldType) => string,
   onProgress?: (loaded: number, total: number) => void
 ): Promise<{ rows: string[][]; fullyLoaded: boolean }> {
-  const wrap = grid.querySelector<HTMLElement>(".k-virtual-scrollable-wrap")
+  const wrap = grid.querySelector<HTMLElement>(KENDO_VIRTUAL_WRAP.selector)
   if (!wrap) {
     return { rows: extractKendoRows(grid, headers, tokenizeFn), fullyLoaded: true }
   }
@@ -190,14 +206,14 @@ export async function extractKendoGrids(
   onProgress?: (gridId: string | undefined, loaded: number, total: number) => void
 ): Promise<ScrapedTable[]> {
   const tables: ScrapedTable[] = []
-  const grids = Array.from(root.querySelectorAll<Element>(".k-grid")).filter(
-    (g) => !g.closest(".k-detail-cell")
+  const grids = Array.from(root.querySelectorAll<Element>(KENDO_GRID.selector)).filter(
+    (g) => !g.closest(KENDO_DETAIL_CELL.selector)
   )
 
   for (const grid of grids) {
     const headers = extractKendoHeaders(grid)
     const pageInfo = extractKendoPager(grid)
-    const isVirtual = grid.querySelector(".k-virtual-scrollable-wrap") !== null
+    const isVirtual = grid.querySelector(KENDO_VIRTUAL_WRAP.selector) !== null
     const gridId = (grid as HTMLElement).id || undefined
 
     let rows: string[][]
@@ -233,7 +249,7 @@ export function extractHtmlTables(
 ): ScrapedTable[] {
   const tables: ScrapedTable[] = []
   root.querySelectorAll("table").forEach((table) => {
-    if (table.closest(".k-grid")) return
+    if (table.closest(KENDO_GRID.selector)) return
     const headers: string[] = []
     table.querySelectorAll("thead th, thead td").forEach((th) => headers.push(th.textContent?.trim() ?? ""))
     if (headers.length === 0) table.querySelector("tr")?.querySelectorAll("th").forEach((th) => headers.push(th.textContent?.trim() ?? ""))
@@ -261,7 +277,7 @@ export function extractFormFields(
 ): ScrapedField[] {
   const fields: ScrapedField[] = []
 
-  root.querySelectorAll("label[for]").forEach((label) => {
+  root.querySelectorAll(FORM_LABEL_FOR.selector).forEach((label) => {
     const control = root.querySelector(`#${CSS.escape(label.getAttribute("for")!)}`)
     if (!control) return
     const labelText = label.textContent?.trim() ?? ""
@@ -272,8 +288,8 @@ export function extractFormFields(
   })
 
   root.querySelectorAll("dl").forEach((dl) => {
-    const dts = Array.from(dl.querySelectorAll(":scope > dt"))
-    const dds = Array.from(dl.querySelectorAll(":scope > dd"))
+    const dts = Array.from(dl.querySelectorAll(FORM_DL_DT.selector))
+    const dds = Array.from(dl.querySelectorAll(FORM_DL_DD.selector))
     dts.forEach((dt, i) => {
       const dd = dds[i]; if (!dd) return
       const labelText = dt.textContent?.trim() ?? ""; const rawValue = dd.textContent?.trim() ?? ""
@@ -283,7 +299,7 @@ export function extractFormFields(
     })
   })
 
-  root.querySelectorAll("table:not(.k-grid table) tr").forEach((tr) => {
+  root.querySelectorAll(FORM_TABLE_ROW.selector).forEach((tr) => {
     const th = tr.querySelector("th"); const td = tr.querySelector("td")
     if (!th || !td) return
     const labelText = th.textContent?.trim() ?? ""; const rawValue = td.textContent?.trim() ?? ""

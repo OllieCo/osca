@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<!--
+  Fixture: form-fields.html  (v1)
+  Source:  Observed structure from OneSchool TRAIN — staff profile detail view
+           and relief request form. Three field extraction patterns:
+           1. label[for] → input (standard HTML forms)
+           2. <dl><dt>/<dd> (definition list — used in read-only profile pages)
+           3. <table><th>/<td> rows (used in some legacy OneSchool detail views)
+  Purpose: Tests extractFormFields() across all three OneSchool field patterns.
+-->
+<html lang="en">
+<head><meta charset="UTF-8"><title>OneSchool — Form Fields (fixture)</title></head>
+<body>
+
+<!-- ── Pattern 1: label[for] → input ──────────────────────────────────── -->
+<section id="relief-form">
+  <h2>Relief Request</h2>
+  <form>
+    <div>
+      <label for="staffName">Staff Name</label>
+      <input id="staffName" type="text" value="Jane Doe" />
+    </div>
+    <div>
+      <label for="staffId">Employee ID</label>
+      <input id="staffId" type="text" value="DOEJA1" />
+    </div>
+    <div>
+      <label for="reliefDate">Relief Date</label>
+      <input id="reliefDate" type="date" value="2026-05-15" />
+    </div>
+    <!-- Empty field — should be excluded -->
+    <div>
+      <label for="notes">Notes</label>
+      <input id="notes" type="text" value="" />
+    </div>
+  </form>
+</section>
+
+<!-- ── Pattern 2: <dl><dt>/<dd> ───────────────────────────────────────── -->
+<section id="staff-profile">
+  <h2>Staff Profile</h2>
+  <dl>
+    <dt>Full Name</dt>
+    <dd>Jane Doe</dd>
+    <dt>Email</dt>
+    <dd>jane.doe@eq.edu.au</dd>
+    <dt>School</dt>
+    <dd>Springfield State School</dd>
+    <!-- Empty dd — should be excluded -->
+    <dt>Mobile</dt>
+    <dd></dd>
+  </dl>
+</section>
+
+<!-- ── Pattern 3: table th/td rows (outside Kendo grid) ──────────────── -->
+<section id="duty-details">
+  <h2>Duty Details</h2>
+  <table>
+    <tbody>
+      <tr>
+        <th>Duty Type</th>
+        <td>Playground Supervision</td>
+      </tr>
+      <tr>
+        <th>Period</th>
+        <td>Recess — 10:30 am</td>
+      </tr>
+      <tr>
+        <!-- Row without th — should be excluded -->
+        <td>Ignored</td>
+        <td>Ignored value</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ── Kendo grid — must NOT be picked up by form extractor ───────────── -->
+<div class="k-grid" id="unrelatedGrid">
+  <div class="k-grid-content">
+    <table>
+      <tbody>
+        <tr>
+          <th>Should NOT appear</th>
+          <td>as form field</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>

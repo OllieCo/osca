@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!--
+  Fixture: kendo-grid-standard.html  (v1)
+  Source:  Observed structure from OneSchool TRAIN (oslptrain.eq.edu.au)
+           Staff Management > Relief Allocation grid
+  Purpose: Tests standard (non-virtual, paginated) Kendo grid extraction.
+  Version: Kendo UI for jQuery 2023.x as shipped by QLD DoE
+-->
+<html lang="en">
+<head><meta charset="UTF-8"><title>OneSchool — Staff Grid (fixture)</title></head>
+<body>
+
+<!-- ── Standard Kendo Grid ─────────────────────────────────────────────── -->
+<div class="k-grid" id="staffGrid" data-role="grid">
+
+  <!-- Header -->
+  <div class="k-grid-header">
+    <div class="k-grid-header-wrap">
+      <table role="grid">
+        <colgroup>
+          <col /><col /><col /><col />
+        </colgroup>
+        <thead role="rowgroup">
+          <tr role="row">
+            <th class="k-header" role="columnheader" scope="col">
+              <span class="k-column-title">Name</span>
+            </th>
+            <th class="k-header" role="columnheader" scope="col">
+              <span class="k-column-title">Employee ID</span>
+            </th>
+            <th class="k-header" role="columnheader" scope="col">
+              <span class="k-column-title">Position</span>
+            </th>
+            <th class="k-header" role="columnheader" scope="col">
+              <span class="k-column-title">School</span>
+            </th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+  </div>
+
+  <!-- Content (paginated, no virtual scroll) -->
+  <div class="k-grid-content">
+    <table role="grid">
+      <colgroup>
+        <col /><col /><col /><col />
+      </colgroup>
+      <tbody role="rowgroup">
+        <tr role="row" class="k-master-row">
+          <td>Jane Doe</td>
+          <td>DOEJA1</td>
+          <td>Classroom Teacher</td>
+          <td>Springfield State School</td>
+        </tr>
+        <tr role="row" class="k-master-row k-alt">
+          <td>John Smith</td>
+          <td>SMITJ1</td>
+          <td>Deputy Principal</td>
+          <td>Springfield State School</td>
+        </tr>
+        <!-- Grouping/detail/no-data rows that must be excluded -->
+        <tr class="k-grouping-row"><td colspan="4"><p class="k-reset">Group A</p></td></tr>
+        <tr class="k-detail-row"><td class="k-detail-cell" colspan="4">Detail content</td></tr>
+        <tr class="k-no-data"><td colspan="4">No data available.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pager -->
+  <div class="k-grid-pager k-pager-wrap" role="navigation">
+    <span class="k-pager-info k-label">1 - 2 of 2 items</span>
+  </div>
+
+</div>
+
+<!-- ── Loading mask (hidden — tests idle detection) ───────────────────── -->
+<div class="k-loading-mask" style="display:none;">
+  <span class="k-loading-text">Loading…</span>
+</div>
+
+</body>
+</html>
