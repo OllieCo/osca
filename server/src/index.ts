@@ -16,6 +16,7 @@ import detokenizeRouter from "./routes/detokenize.js"
 import chatRouter from "./routes/chat.js"
 import { globalLimiter, agentLimiter, healthLimiter } from "./lib/rate-limit.js"
 import { abuseSignalMiddleware } from "./lib/abuse-signals.js"
+import { freemiumGuard } from "./lib/freemium.js"
 
 initialiseSentry()
 
@@ -65,6 +66,11 @@ app.use("/api/agent", agentLimiter)
 
 // ── Abuse signal logging (401 / 429 / 400 spikes) ─────────────────────────────
 app.use(abuseSignalMiddleware)
+
+// ── Freemium enforcement — FREE-plan schools: 100 actions/month cap ───────────
+// Applied only to the action-execution route (not polling or read-only routes).
+// Returns 402 when the cap is hit; emits freemium_limit_reached telemetry.
+app.use("/api/agent/action-result", freemiumGuard)
 
 app.use("/api", healthRouter)
 app.use("/api", agentRouter)

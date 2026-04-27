@@ -23,6 +23,14 @@ enum SubscriptionStatus {
   UNPAID
 }
 
+/// Pricing tier — set by the Stripe webhook handler on subscription create/update.
+/// Defaults to FREE for new schools until a Stripe subscription is confirmed.
+enum SubscriptionPlan {
+  FREE
+  TIER_1
+  TIER_2
+}
+
 enum AuditAction {
   USER_CREATED
   USER_UPDATED
@@ -34,6 +42,14 @@ enum AuditAction {
   SUBSCRIPTION_CANCELED
   LOGIN
   LOGOUT
+}
+
+/// Privacy level for telemetry events (matches event-dictionary.md L0–L3 scale).
+enum TelemetryLevel {
+  L0 // Anonymous counts — no identifier
+  L1 // School-scoped counts — school_id only
+  L2 // User-scoped — anonymised user_id
+  L3 // With structured metadata (never PII)
 }
 
 // ── Models ────────────────────────────────────────────────────────────────────
@@ -77,6 +93,7 @@ model Subscription {
   stripeCustomerId     String?            @unique @map("stripe_customer_id")
   stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
   stripePriceId        String?            @map("stripe_price_id")
+  plan                 SubscriptionPlan   @default(FREE) @map("plan")
   status               SubscriptionStatus @default(TRIALING)
   currentPeriodStart   DateTime?          @map("current_period_start")
   currentPeriodEnd     DateTime?          @map("current_period_end")
@@ -106,4 +123,21 @@ model AuditLog {
   @@index([schoolId, createdAt])
   @@index([userId])
   @@map("audit_logs")
+}
+
+/// Product-analytics events. Separate from AuditLog — different retention, different access controls.
+/// Populated by server/src/lib/telemetry/emit.ts. Never contains L4+ data (PII / scraped content).
+/// Access: read-only for product analytics role; write-only for the API/worker.
+model TelemetryEvent {
+  id         String         @id @default(cuid())
+  event      String         // event name, matches event-dictionary.md
+  level      TelemetryLevel
+  schoolId   String?        @map("school_id")  // null for L0 events
+  userId     String?        @map("user_id")    // anonymised ID only; null unless L2
+  props      Json           // structured metadata, never PII
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  @@index([event, createdAt])
+  @@index([schoolId, createdAt])
+  @@map("telemetry_events")
 }

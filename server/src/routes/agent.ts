@@ -5,6 +5,8 @@ import type { AgentSession, AgentAction, ScrapedRecord } from "../types/index.js
 import { validateBody, AgentStartBody, AgentActionResultBody, ScrapeBody } from "../lib/validate.js"
 import { sessions } from "../lib/session-store.js"
 import { inferenceQueue } from "../lib/inference-queue.js"
+import { emitAsync } from "../lib/telemetry/emit.js"
+import { getSchoolId } from "../lib/freemium.js"
 
 const router = Router()
 
@@ -24,6 +26,11 @@ router.post("/agent/start", validateBody(AgentStartBody), async (req: Request, r
   sessions.set(session.id, session)
 
   const job = await inferenceQueue.add("plan", { sessionId: session.id })
+
+  emitAsync("job_enqueued", {
+    job_id: job.id ?? "unknown",
+    school_id: getSchoolId(req) ?? undefined,
+  })
 
   res.json({ sessionId: session.id, jobId: job.id })
 })

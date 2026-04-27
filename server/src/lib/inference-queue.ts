@@ -19,6 +19,7 @@ import {
   inferenceJobsFailed,
   actionsTotal,
 } from "./metrics.js"
+import { emitAsync } from "./telemetry/emit.js"
 
 // ── Connection ────────────────────────────────────────────────────────────────
 // BullMQ requires maxRetriesPerRequest: null for its blocking commands (BRPOP
@@ -82,10 +83,18 @@ async function processInferenceJob(job: Job<InferenceJobData, InferenceJobResult
 
   actionsTotal.add(1, { action_type: action.type })
 
+  const durationMs = Date.now() - (job.processedOn ?? Date.now())
+
   logger.debug(
     { sessionId, jobId: job.id, actionType: action.type },
     "Inference job completed"
   )
+
+  emitAsync("job_completed", {
+    job_id: job.id ?? "unknown",
+    duration_ms: durationMs,
+    attempts: job.attemptsMade + 1,
+  })
 
   return { actionType: action.type }
 }
@@ -125,6 +134,12 @@ inferenceWorker.on("failed", (job, err) => {
   if (isFinal) {
     inferenceQueueActive.add(-1)
     inferenceJobsFailed.add(1)
+
+    emitAsync("job_failed", {
+      job_id: job?.id ?? "unknown",
+      error_code: err.name ?? "UnknownError",
+      attempts: job?.attemptsMade ?? 0,
+    })
   }
 
   const sessionId = job?.data?.sessionId
