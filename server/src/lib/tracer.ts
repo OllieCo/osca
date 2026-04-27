@@ -21,9 +21,9 @@ if (isOtelEnabled) {
 
   sdk = new NodeSDK({
     resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: "dispatcher-api",
+      [ATTR_SERVICE_NAME]: "ospa-api",
       [ATTR_SERVICE_VERSION]: process.env["npm_package_version"] ?? "0.0.0",
-      "deployment.environment": process.env["DISPATCHER_ENV"] ?? "dev",
+      "deployment.environment": process.env["OSPA_ENV"] ?? "dev",
     }),
 
     // PiiSpanProcessor wraps the OTLP exporter — scrubs PII from attributes before export

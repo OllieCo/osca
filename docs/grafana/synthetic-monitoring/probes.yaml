@@ -32,7 +32,7 @@ checks:
             value: "grafana-synthetic-monitoring"
         noFollowRedirects: false
     labels:
-      service: dispatcher-api
+      service: ospa-api
       environment: production
       region: au-southeast-1
 
@@ -57,7 +57,7 @@ checks:
             value: "grafana-synthetic-monitoring"
         noFollowRedirects: false
     labels:
-      service: dispatcher-api
+      service: ospa-api
       environment: production
       region: ap-southeast-1
 

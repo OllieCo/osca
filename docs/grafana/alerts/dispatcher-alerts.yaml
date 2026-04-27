@@ -1,26 +1,26 @@
-# Dispatcher — Grafana Alerting Rules
+# OSPA — Grafana Alerting Rules
 #
 # Import via: Grafana UI → Alerting → Alert rules → Import, or via the
 # provisioning script: node scripts/grafana-provision.mjs
 #
 # Routing: all alerts → on-call contact point (configure in Grafana → Alerting
-# → Contact points → add "dispatcher-oncall" with Pushover/OpsGenie details).
+# → Contact points → add "ospa-oncall" with Pushover/OpsGenie/email details).
 
 apiVersion: 1
 
 groups:
   # ── SLO burn rate ──────────────────────────────────────────────────────────
   - name: slo-burn
-    folder: Dispatcher
+    folder: OSPA
     interval: 1m
     rules:
-      - uid: dispatcher-slo-fast-burn
+      - uid: ospa-slo-fast-burn
         title: "SLO — Fast burn (1h window)"
         condition: C
         for: 5m
         labels:
           severity: critical
-          team: dispatcher
+          team: ospa
         annotations:
           summary: "API error-budget burning fast — {{ $values.C.Value | printf \"%.1f\" }}x rate"
           description: >
@@ -35,10 +35,10 @@ groups:
             model:
               expr: >
                 sum(rate(http_server_duration_milliseconds_count{
-                  service_name="dispatcher-api", http_status_code=~"5.."}[1h]))
+                  service_name="ospa-api", http_status_code=~"5.."}[1h]))
                 /
                 sum(rate(http_server_duration_milliseconds_count{
-                  service_name="dispatcher-api"}[1h]))
+                  service_name="ospa-api"}[1h]))
               legendFormat: "1h error rate"
               refId: A
           - refId: B
@@ -47,10 +47,10 @@ groups:
             model:
               expr: >
                 sum(rate(http_server_duration_milliseconds_count{
-                  service_name="dispatcher-api", http_status_code=~"5.."}[5m]))
+                  service_name="ospa-api", http_status_code=~"5.."}[5m]))
                 /
                 sum(rate(http_server_duration_milliseconds_count{
-                  service_name="dispatcher-api"}[5m]))
+                  service_name="ospa-api"}[5m]))
               legendFormat: "5m error rate"
               refId: B
           - refId: C
@@ -61,13 +61,13 @@ groups:
               expression: "$B > (14 * 0.005)"
               refId: C
 
-      - uid: dispatcher-slo-slow-burn
+      - uid: ospa-slo-slow-burn
         title: "SLO — Slow burn (6h window)"
         condition: C
         for: 15m
         labels:
           severity: warning
-          team: dispatcher
+          team: ospa
         annotations:
           summary: "SLO error budget slow burn — {{ $values.C.Value | printf \"%.1f\" }}x rate"
           description: >
@@ -81,10 +81,10 @@ groups:
             model:
               expr: >
                 sum(rate(http_server_duration_milliseconds_count{
-                  service_name="dispatcher-api", http_status_code=~"5.."}[6h]))
+                  service_name="ospa-api", http_status_code=~"5.."}[6h]))
                 /
                 sum(rate(http_server_duration_milliseconds_count{
-                  service_name="dispatcher-api"}[6h]))
+                  service_name="ospa-api"}[6h]))
               refId: A
           - refId: C
             datasourceUid: "__expr__"
@@ -96,16 +96,16 @@ groups:
 
   # ── Latency SLO ────────────────────────────────────────────────────────────
   - name: latency
-    folder: Dispatcher
+    folder: OSPA
     interval: 1m
     rules:
-      - uid: dispatcher-latency-p95
+      - uid: ospa-latency-p95
         title: "SLO — p95 latency breach on /api/agent"
         condition: C
         for: 5m
         labels:
           severity: warning
-          team: dispatcher
+          team: ospa
         annotations:
           summary: "p95 latency on /api/agent > 2s (SLO breach)"
           description: >
@@ -121,7 +121,7 @@ groups:
                 histogram_quantile(0.95,
                   sum by (le) (
                     rate(http_server_duration_milliseconds_bucket{
-                      service_name="dispatcher-api",
+                      service_name="ospa-api",
                       http_route=~"/api/agent.*"}[5m])
                   )
                 )
@@ -138,16 +138,16 @@ groups:
 
   # ── Queue depth ────────────────────────────────────────────────────────────
   - name: queue
-    folder: Dispatcher
+    folder: OSPA
     interval: 1m
     rules:
-      - uid: dispatcher-queue-depth
+      - uid: ospa-queue-depth
         title: "Inference queue backlog > 10"
         condition: C
         for: 3m
         labels:
           severity: warning
-          team: dispatcher
+          team: ospa
         annotations:
           summary: "BullMQ inference queue has {{ $values.A.Value }} waiting jobs"
           description: >
@@ -159,7 +159,7 @@ groups:
             relativeTimeRange: { from: 180, to: 0 }
             datasourceUid: "${DS_PROMETHEUS}"
             model:
-              expr: "dispatcher_inference_queue_waiting{service_name=\"dispatcher-api\"}"
+              expr: "ospa_inference_queue_waiting{service_name=\"ospa-api\"}"
               legendFormat: "Waiting jobs"
               refId: A
           - refId: C
@@ -171,13 +171,13 @@ groups:
                 - { evaluator: { type: gt, params: [10] }, operator: { type: and } }
               refId: C
 
-      - uid: dispatcher-queue-failed
+      - uid: ospa-queue-failed
         title: "Inference job failure rate elevated"
         condition: C
         for: 5m
         labels:
           severity: critical
-          team: dispatcher
+          team: ospa
         annotations:
           summary: "Inference jobs failing — {{ $values.A.Value }} failures in 5m"
           description: >
@@ -190,8 +190,8 @@ groups:
             datasourceUid: "${DS_PROMETHEUS}"
             model:
               expr: >
-                increase(dispatcher_inference_jobs_failed_total{
-                  service_name="dispatcher-api"}[5m])
+                increase(ospa_inference_jobs_failed_total{
+                  service_name="ospa-api"}[5m])
               legendFormat: "Failed jobs (5m)"
               refId: A
           - refId: C
@@ -205,18 +205,18 @@ groups:
 
   # ── Health check ───────────────────────────────────────────────────────────
   - name: health
-    folder: Dispatcher
+    folder: OSPA
     interval: 30s
     rules:
-      - uid: dispatcher-health-down
+      - uid: ospa-health-down
         title: "API health check returning 503"
         condition: C
         for: 2m
         labels:
           severity: critical
-          team: dispatcher
+          team: ospa
         annotations:
-          summary: "Dispatcher API /api/health returning 503 (Postgres or Redis down)"
+          summary: "OSPA API /api/health returning 503 (Postgres or Redis down)"
           description: >
             The /api/health endpoint is returning HTTP 503, indicating Postgres
             or Redis is unreachable. The service is degraded. Check container
@@ -228,7 +228,7 @@ groups:
             model:
               expr: >
                 sum(rate(http_server_duration_milliseconds_count{
-                  service_name="dispatcher-api",
+                  service_name="ospa-api",
                   http_route="/api/health",
                   http_status_code="503"}[1m]))
               legendFormat: "503 rate on /api/health"
@@ -244,16 +244,16 @@ groups:
 
   # ── Memory ─────────────────────────────────────────────────────────────────
   - name: resources
-    folder: Dispatcher
+    folder: OSPA
     interval: 1m
     rules:
-      - uid: dispatcher-memory-high
+      - uid: ospa-memory-high
         title: "API process memory > 512MB"
         condition: C
         for: 10m
         labels:
           severity: warning
-          team: dispatcher
+          team: ospa
         annotations:
           summary: "API RSS memory is {{ $values.A.Value | humanize1024 }}B — possible memory leak"
           description: >
@@ -265,7 +265,7 @@ groups:
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: "${DS_PROMETHEUS}"
             model:
-              expr: "process_resident_memory_bytes{service_name=\"dispatcher-api\"}"
+              expr: "process_resident_memory_bytes{service_name=\"ospa-api\"}"
               legendFormat: "RSS bytes"
               refId: A
           - refId: C

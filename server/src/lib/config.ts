@@ -9,7 +9,7 @@ const EnvSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "staging", "production"])
     .default("development"),
-  DISPATCHER_ENV: z
+  OSPA_ENV: z
     .enum(["dev", "staging", "prod"])
     .default("dev"),
 
@@ -19,7 +19,7 @@ const EnvSchema = z.object({
 
   // Inference
   OLLAMA_BASE_URL: z.string().url().default("http://localhost:11434"),
-  OLLAMA_MODEL: z.string().min(1).default("gemma4:12b"),
+  OLLAMA_MODEL: z.string().min(1).default("gemma3:4b"),
 
   // Persistence
   DATABASE_URL: z.string().url().default("postgresql://dispatcher:dispatcher@localhost:5432/dispatcher_dev"),

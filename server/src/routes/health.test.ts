@@ -17,7 +17,7 @@ vi.mock("../lib/inference-client.js", () => ({
 
 vi.mock("../lib/config.js", () => ({
   config: {
-    DISPATCHER_ENV: "dev",
+    OSPA_ENV: "dev",
     OLLAMA_BASE_URL: "http://localhost:11434",
   },
 }))

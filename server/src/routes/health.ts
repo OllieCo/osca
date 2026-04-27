@@ -20,7 +20,7 @@ router.get("/health", async (_req, res) => {
 
   res.status(status).json({
     ok,
-    env: config.DISPATCHER_ENV,
+    env: config.OSPA_ENV,
     services: {
       postgres,
       redis: redisOk,

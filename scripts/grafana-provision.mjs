@@ -6,7 +6,7 @@
  * Grafana HTTP API. Safe to re-run — dashboards are upserted by UID.
  *
  * Usage:
- *   GRAFANA_STACK_URL=https://ollieco.grafana.net \
+ *   GRAFANA_STACK_URL=https://osca.grafana.net \
  *   GRAFANA_API_TOKEN=glsa_... \
  *   node scripts/grafana-provision.mjs
  *
@@ -33,7 +33,7 @@ const API_TOKEN = process.env.GRAFANA_API_TOKEN
 
 if (!STACK_URL || !API_TOKEN) {
   console.error("ERROR: GRAFANA_STACK_URL and GRAFANA_API_TOKEN must be set")
-  console.error("  export GRAFANA_STACK_URL=https://your-stack.grafana.net")
+  console.error("  export GRAFANA_STACK_URL=https://osca.grafana.net")
   console.error("  export GRAFANA_API_TOKEN=glsa_...")
   process.exit(1)
 }
@@ -60,7 +60,6 @@ async function apiCall(method, path, body) {
 // ── Ensure folder exists ───────────────────────────────────────────────────
 
 async function ensureFolder(title) {
-  // Check if folder already exists
   const folders = await apiCall("GET", "/api/folders")
   const existing = folders.find((f) => f.title === title)
   if (existing) {
@@ -72,6 +71,36 @@ async function ensureFolder(title) {
   return created.uid
 }
 
+// ── Delete old Dispatcher-named alert rules (one-time migration) ───────────
+
+const OLD_RULE_UIDS = [
+  "dispatcher-slo-fast-burn",
+  "dispatcher-slo-slow-burn",
+  "dispatcher-latency-p95",
+  "dispatcher-queue-depth",
+  "dispatcher-queue-failed",
+  "dispatcher-health-down",
+  "dispatcher-memory-high",
+]
+
+async function deleteOldRules() {
+  let deleted = 0
+  for (const uid of OLD_RULE_UIDS) {
+    const existing = await fetch(`${STACK_URL}/api/v1/provisioning/alert-rules/${uid}`, { headers })
+    if (existing.ok) {
+      const res = await fetch(`${STACK_URL}/api/v1/provisioning/alert-rules/${uid}`, {
+        method: "DELETE",
+        headers,
+      })
+      if (res.ok || res.status === 404) {
+        console.log(`  Deleted old rule '${uid}'`)
+        deleted++
+      }
+    }
+  }
+  if (deleted === 0) console.log("  No old Dispatcher rules found — skipping cleanup")
+}
+
 // ── Import dashboards ──────────────────────────────────────────────────────
 
 async function importDashboards(folderUid) {
@@ -81,9 +110,8 @@ async function importDashboards(folderUid) {
   for (const file of files) {
     const raw = readFileSync(join(dashDir, file), "utf-8")
     const dashboard = JSON.parse(raw)
-    // Remove __inputs/__requires meta — not needed for API import
     const { __inputs, __requires, ...dash } = dashboard
-    dash.id = null  // Let Grafana assign an ID; uid is the idempotency key
+    dash.id = null
 
     try {
       const result = await apiCall("POST", "/api/dashboards/import", {
@@ -94,7 +122,7 @@ async function importDashboards(folderUid) {
           name: inp.name,
           type: inp.type,
           pluginId: inp.pluginId,
-          value: inp.pluginId,  // use plugin type as datasource selector
+          value: inp.pluginId,
         })) ?? [],
       })
       const status = result.status ?? result.imported ?? "ok"
@@ -106,8 +134,6 @@ async function importDashboards(folderUid) {
 }
 
 // ── Import alert rules ─────────────────────────────────────────────────────
-// The Grafana provisioning HTTP API accepts alert rules one at a time as JSON.
-// We define rules as inline objects here rather than parsing the YAML doc.
 
 async function importAlertRules(folderUid) {
   const rules = buildAlertRules(folderUid)
@@ -115,10 +141,8 @@ async function importAlertRules(folderUid) {
 
   for (const rule of rules) {
     try {
-      // Check if rule already exists
       const existing = await fetch(`${STACK_URL}/api/v1/provisioning/alert-rules/${rule.uid}`, { headers })
       if (existing.ok) {
-        // Update via PUT
         const res = await fetch(`${STACK_URL}/api/v1/provisioning/alert-rules/${rule.uid}`, {
           method: "PUT",
           headers: { ...headers, "X-Disable-Provenance": "true" },
@@ -127,7 +151,6 @@ async function importAlertRules(folderUid) {
         if (!res.ok) throw new Error(`${res.status} ${await res.text()}`)
         console.log(`  Updated alert rule '${rule.title}'`)
       } else {
-        // Create via POST
         const res = await fetch(`${STACK_URL}/api/v1/provisioning/alert-rules`, {
           method: "POST",
           headers: { ...headers, "X-Disable-Provenance": "true" },
@@ -171,102 +194,102 @@ function buildAlertRules(folderUID) {
   return [
     {
       ...base,
-      uid: "dispatcher-slo-fast-burn",
+      uid: "ospa-slo-fast-burn",
       title: "SLO — Fast burn (1h window)",
       ruleGroup: "slo-burn",
       for: "5m",
-      labels: { severity: "critical", team: "dispatcher" },
+      labels: { severity: "critical", team: "ospa" },
       annotations: {
         summary: "API error-budget burning fast",
         description: "Fast burn: >14x error budget consumption rate. Budget exhausted in ~2h. Check /api/health and Sentry immediately.",
       },
       condition: "C",
       data: [
-        prom(`sum(rate(http_server_duration_milliseconds_count{service_name="dispatcher-api",http_status_code=~"5.."}[1h])) / sum(rate(http_server_duration_milliseconds_count{service_name="dispatcher-api"}[1h]))`, "A"),
+        prom(`sum(rate(http_server_duration_milliseconds_count{service_name="ospa-api",http_status_code=~"5.."}[1h])) / sum(rate(http_server_duration_milliseconds_count{service_name="ospa-api"}[1h]))`, "A"),
         mathExpr("$A > (14 * 0.005)", "C"),
       ],
     },
     {
       ...base,
-      uid: "dispatcher-slo-slow-burn",
+      uid: "ospa-slo-slow-burn",
       title: "SLO — Slow burn (6h window)",
       ruleGroup: "slo-burn",
       for: "15m",
-      labels: { severity: "warning", team: "dispatcher" },
+      labels: { severity: "warning", team: "ospa" },
       annotations: { summary: "SLO error budget slow burn", description: "3x burn rate over 6h. Review recent deployments." },
       condition: "C",
       data: [
-        prom(`sum(rate(http_server_duration_milliseconds_count{service_name="dispatcher-api",http_status_code=~"5.."}[6h])) / sum(rate(http_server_duration_milliseconds_count{service_name="dispatcher-api"}[6h]))`, "A"),
+        prom(`sum(rate(http_server_duration_milliseconds_count{service_name="ospa-api",http_status_code=~"5.."}[6h])) / sum(rate(http_server_duration_milliseconds_count{service_name="ospa-api"}[6h]))`, "A"),
         mathExpr("$A > (3 * 0.005)", "C"),
       ],
     },
     {
       ...base,
-      uid: "dispatcher-latency-p95",
+      uid: "ospa-latency-p95",
       title: "SLO — p95 latency > 2s on /api/agent",
       ruleGroup: "latency",
       for: "5m",
-      labels: { severity: "warning", team: "dispatcher" },
+      labels: { severity: "warning", team: "ospa" },
       annotations: { summary: "p95 latency SLO breach", description: "p95 response time on /api/agent exceeded 2000ms SLO for 5 minutes. Check Ollama latency and queue depth." },
       condition: "C",
       data: [
-        prom(`histogram_quantile(0.95, sum by (le) (rate(http_server_duration_milliseconds_bucket{service_name="dispatcher-api",http_route=~"/api/agent.*"}[5m])))`, "A"),
+        prom(`histogram_quantile(0.95, sum by (le) (rate(http_server_duration_milliseconds_bucket{service_name="ospa-api",http_route=~"/api/agent.*"}[5m])))`, "A"),
         thresholdExpr("A", "C", 2000),
       ],
     },
     {
       ...base,
-      uid: "dispatcher-queue-depth",
+      uid: "ospa-queue-depth",
       title: "Inference queue backlog > 10",
       ruleGroup: "queue",
       for: "3m",
-      labels: { severity: "warning", team: "dispatcher" },
+      labels: { severity: "warning", team: "ospa" },
       annotations: { summary: "BullMQ inference queue backlog", description: ">10 waiting inference jobs for 3+ min. Worker may be stalled." },
       condition: "C",
       data: [
-        prom(`dispatcher_inference_queue_waiting{service_name="dispatcher-api"}`, "A"),
+        prom(`ospa_inference_queue_waiting{service_name="ospa-api"}`, "A"),
         thresholdExpr("A", "C", 10),
       ],
     },
     {
       ...base,
-      uid: "dispatcher-queue-failed",
+      uid: "ospa-queue-failed",
       title: "Inference job failure rate elevated",
       ruleGroup: "queue",
       for: "5m",
-      labels: { severity: "critical", team: "dispatcher" },
+      labels: { severity: "critical", team: "ospa" },
       annotations: { summary: "Inference jobs failing", description: ">3 inference job failures in 5 min. Teachers seeing stuck/failed actions. Check Ollama and BullMQ dead-letter queue." },
       condition: "C",
       data: [
-        prom(`increase(dispatcher_inference_jobs_failed_total{service_name="dispatcher-api"}[5m])`, "A"),
+        prom(`increase(ospa_inference_jobs_failed_total{service_name="ospa-api"}[5m])`, "A"),
         thresholdExpr("A", "C", 3),
       ],
     },
     {
       ...base,
-      uid: "dispatcher-health-down",
+      uid: "ospa-health-down",
       title: "API /api/health returning 503",
       ruleGroup: "health",
       for: "2m",
-      labels: { severity: "critical", team: "dispatcher" },
-      annotations: { summary: "Dispatcher API degraded (503)", description: "/api/health returning 503 — Postgres or Redis unreachable. Check containers immediately." },
+      labels: { severity: "critical", team: "ospa" },
+      annotations: { summary: "OSPA API degraded (503)", description: "/api/health returning 503 — Postgres or Redis unreachable. Check containers immediately." },
       condition: "C",
       data: [
-        prom(`sum(rate(http_server_duration_milliseconds_count{service_name="dispatcher-api",http_route="/api/health",http_status_code="503"}[1m]))`, "A"),
+        prom(`sum(rate(http_server_duration_milliseconds_count{service_name="ospa-api",http_route="/api/health",http_status_code="503"}[1m]))`, "A"),
         thresholdExpr("A", "C", 0),
       ],
     },
     {
       ...base,
-      uid: "dispatcher-memory-high",
+      uid: "ospa-memory-high",
       title: "API process memory > 512MB",
       ruleGroup: "resources",
       for: "10m",
-      labels: { severity: "warning", team: "dispatcher" },
+      labels: { severity: "warning", team: "ospa" },
       annotations: { summary: "API RSS memory elevated", description: "Node.js process using >512MB RSS for 10+ min. Check for memory leaks." },
       condition: "C",
       data: [
-        prom(`process_resident_memory_bytes{service_name="dispatcher-api"}`, "A"),
+        prom(`process_resident_memory_bytes{service_name="ospa-api"}`, "A"),
         thresholdExpr("A", "C", 536870912),
       ],
     },
@@ -279,8 +302,11 @@ async function main() {
   console.log(`Provisioning Grafana stack: ${STACK_URL}`)
   console.log("")
 
-  console.log("1. Ensuring 'Dispatcher' folder...")
-  const folderUid = await ensureFolder("Dispatcher")
+  console.log("0. Cleaning up old Dispatcher alert rules...")
+  await deleteOldRules()
+
+  console.log("1. Ensuring 'OSPA' folder...")
+  const folderUid = await ensureFolder("OSPA")
 
   console.log("2. Importing dashboards...")
   await importDashboards(folderUid)

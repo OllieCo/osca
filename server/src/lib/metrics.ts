@@ -11,7 +11,7 @@
 
 import { metrics } from "@opentelemetry/api"
 
-const meter = metrics.getMeter("dispatcher-api", "1.0.0")
+const meter = metrics.getMeter("ospa-api", "1.0.0")
 
 // ── Inference queue ───────────────────────────────────────────────────────────
 // UpDownCounter is the correct instrument for a "current level" gauge that can
@@ -19,7 +19,7 @@ const meter = metrics.getMeter("dispatcher-api", "1.0.0")
 
 /** Current number of inference jobs sitting in the BullMQ waiting state. */
 export const inferenceQueueWaiting = meter.createUpDownCounter(
-  "dispatcher_inference_queue_waiting",
+  "ospa_inference_queue_waiting",
   {
     description: "Number of inference jobs currently waiting in the BullMQ queue",
     unit: "jobs",
@@ -28,7 +28,7 @@ export const inferenceQueueWaiting = meter.createUpDownCounter(
 
 /** Current number of inference jobs actively being processed by a worker. */
 export const inferenceQueueActive = meter.createUpDownCounter(
-  "dispatcher_inference_queue_active",
+  "ospa_inference_queue_active",
   {
     description: "Number of inference jobs currently being processed",
     unit: "jobs",
@@ -37,7 +37,7 @@ export const inferenceQueueActive = meter.createUpDownCounter(
 
 /** Monotonically increasing count of successfully completed inference jobs. */
 export const inferenceJobsCompleted = meter.createCounter(
-  "dispatcher_inference_jobs_completed_total",
+  "ospa_inference_jobs_completed_total",
   {
     description: "Total inference jobs completed successfully",
   }
@@ -48,7 +48,7 @@ export const inferenceJobsCompleted = meter.createCounter(
  * Only incremented on the final failure — not on intermediate retry attempts.
  */
 export const inferenceJobsFailed = meter.createCounter(
-  "dispatcher_inference_jobs_failed_total",
+  "ospa_inference_jobs_failed_total",
   {
     description: "Total inference jobs that failed after exhausting all retries",
   }
@@ -60,7 +60,7 @@ export const inferenceJobsFailed = meter.createCounter(
 
 /** Time-to-first-token (TTFT) for Ollama inference requests, in milliseconds. */
 export const inferenceDuration = meter.createHistogram(
-  "dispatcher_inference_duration_milliseconds",
+  "ospa_inference_duration_milliseconds",
   {
     description: "Ollama inference request duration (TTFT) in milliseconds",
     unit: "ms",
@@ -76,7 +76,7 @@ export const inferenceDuration = meter.createHistogram(
  * Counter incremented every time the action-planner returns an action.
  * Labelled by `action_type` (click, type, navigate, scrape, done, error, …).
  */
-export const actionsTotal = meter.createCounter("dispatcher_actions_total", {
+export const actionsTotal = meter.createCounter("ospa_actions_total", {
   description: "Total agent actions planned, by action type",
 })
 
@@ -87,6 +87,6 @@ export const actionsTotal = meter.createCounter("dispatcher_actions_total", {
  * attribute from a span before OTLP export.  Useful for auditing how much PII
  * is reaching the export boundary and being scrubbed.
  */
-export const piiBlocksTotal = meter.createCounter("dispatcher_pii_blocks_total", {
+export const piiBlocksTotal = meter.createCounter("ospa_pii_blocks_total", {
   description: "Spans that had one or more PII attributes redacted before OTLP export",
 })

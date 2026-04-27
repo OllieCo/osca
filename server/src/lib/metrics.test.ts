@@ -94,7 +94,7 @@ vi.mock("./config.js", () => ({
     OLLAMA_BASE_URL: "http://localhost:11434",
     OLLAMA_MODEL: "test-model",
     NODE_ENV: "test",
-    DISPATCHER_ENV: "dev",
+    OSPA_ENV: "dev",
     PORT: 3001,
     CORS_ORIGIN: "http://localhost:3000",
     DATABASE_URL: "postgresql://test",

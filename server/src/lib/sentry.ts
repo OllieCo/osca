@@ -7,7 +7,7 @@ export function initialiseSentry(): void {
 
   Sentry.init({
     dsn: config.SENTRY_DSN,
-    environment: config.DISPATCHER_ENV,
+    environment: config.OSPA_ENV,
     release: process.env["npm_package_version"],
     // Fail-closed PII scrubber — runs on every event before sending
     beforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
@@ -26,7 +26,7 @@ export function initialiseSentry(): void {
       return breadcrumb
     },
     enabled: config.NODE_ENV !== "test",
-    tracesSampleRate: config.DISPATCHER_ENV === "prod" ? 0.1 : 0,
+    tracesSampleRate: config.OSPA_ENV === "prod" ? 0.1 : 0,
   })
 }
 

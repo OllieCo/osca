@@ -17,7 +17,7 @@
     { "type": "panel", "id": "gauge", "name": "Gauge", "version": "" }
   ],
   "annotations": { "list": [] },
-  "description": "Dispatcher API — RED method health, infrastructure, and queue status",
+  "description": "OSPA API — RED method health, infrastructure, and queue status",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -47,7 +47,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "sum by (http_route) (rate(http_server_duration_milliseconds_count{service_name=\"dispatcher-api\"}[1m]))",
+          "expr": "sum by (http_route) (rate(http_server_duration_milliseconds_count{service_name=\"ospa-api\"}[1m]))",
           "legendFormat": "{{http_route}}",
           "refId": "A"
         }
@@ -80,7 +80,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "100 * sum(rate(http_server_duration_milliseconds_count{service_name=\"dispatcher-api\", http_status_code=~\"5..\"}[5m])) / sum(rate(http_server_duration_milliseconds_count{service_name=\"dispatcher-api\"}[5m]))",
+          "expr": "100 * sum(rate(http_server_duration_milliseconds_count{service_name=\"ospa-api\", http_status_code=~\"5..\"}[5m])) / sum(rate(http_server_duration_milliseconds_count{service_name=\"ospa-api\"}[5m]))",
           "legendFormat": "5xx error rate",
           "refId": "A"
         }
@@ -119,19 +119,19 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "histogram_quantile(0.50, sum by (le, http_route) (rate(http_server_duration_milliseconds_bucket{service_name=\"dispatcher-api\"}[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le, http_route) (rate(http_server_duration_milliseconds_bucket{service_name=\"ospa-api\"}[5m])))",
           "legendFormat": "p50 {{http_route}}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_duration_milliseconds_bucket{service_name=\"dispatcher-api\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_duration_milliseconds_bucket{service_name=\"ospa-api\"}[5m])))",
           "legendFormat": "p95 {{http_route}}",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "histogram_quantile(0.99, sum by (le, http_route) (rate(http_server_duration_milliseconds_bucket{service_name=\"dispatcher-api\"}[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, http_route) (rate(http_server_duration_milliseconds_bucket{service_name=\"ospa-api\"}[5m])))",
           "legendFormat": "p99 {{http_route}}",
           "refId": "C"
         }
@@ -169,7 +169,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "process_resident_memory_bytes{service_name=\"dispatcher-api\"}",
+          "expr": "process_resident_memory_bytes{service_name=\"ospa-api\"}",
           "legendFormat": "RSS",
           "refId": "A"
         }
@@ -194,7 +194,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "rate(process_cpu_seconds_total{service_name=\"dispatcher-api\"}[1m])",
+          "expr": "rate(process_cpu_seconds_total{service_name=\"ospa-api\"}[1m])",
           "legendFormat": "CPU",
           "refId": "A"
         }
@@ -232,19 +232,19 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "dispatcher_inference_queue_waiting{service_name=\"dispatcher-api\"}",
+          "expr": "ospa_inference_queue_waiting{service_name=\"ospa-api\"}",
           "legendFormat": "Waiting",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "dispatcher_inference_queue_active{service_name=\"dispatcher-api\"}",
+          "expr": "ospa_inference_queue_active{service_name=\"ospa-api\"}",
           "legendFormat": "Active",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "dispatcher_inference_queue_failed{service_name=\"dispatcher-api\"}",
+          "expr": "ospa_inference_queue_failed{service_name=\"ospa-api\"}",
           "legendFormat": "Failed (total)",
           "refId": "C"
         }
@@ -275,7 +275,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "http_server_active_requests{service_name=\"dispatcher-api\"}",
+          "expr": "http_server_active_requests{service_name=\"ospa-api\"}",
           "legendFormat": "Active requests",
           "refId": "A"
         }
@@ -286,7 +286,7 @@
   ],
   "refresh": "30s",
   "schemaVersion": 38,
-  "tags": ["dispatcher", "system", "sre"],
+  "tags": ["ospa", "system", "sre"],
   "templating": {
     "list": [
       {
@@ -305,8 +305,8 @@
   "time": { "from": "now-3h", "to": "now" },
   "timepicker": {},
   "timezone": "Australia/Brisbane",
-  "title": "Dispatcher — System Health",
-  "uid": "dispatcher-system-health",
+  "title": "OSPA — System Health",
+  "uid": "ospa-system-health",
   "version": 1,
   "weekStart": ""
 }

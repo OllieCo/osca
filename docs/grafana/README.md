@@ -1,6 +1,6 @@
-# Grafana Cloud — Dispatcher Observability
+# Grafana Cloud — OSPA Observability
 
-Dashboards, alert rules, and synthetic monitoring probes for Dispatcher.
+Dashboards, alert rules, and synthetic monitoring probes for OSPA.
 All configuration is stored as code and can be provisioned idempotently.
 
 ---
@@ -30,12 +30,13 @@ Requires a **Grafana API token** (different from the OTLP ingestion token):
 3. **Add service account token** → copy the `glsa_...` value
 
 ```bash
-export GRAFANA_STACK_URL=https://your-stack.grafana.net
+export GRAFANA_STACK_URL=https://osca.grafana.net
 export GRAFANA_API_TOKEN=glsa_...
 node scripts/grafana-provision.mjs
 ```
 
 The script is idempotent — safe to re-run after any dashboard or alert change.
+It also automatically removes old `dispatcher-*` alert rule UIDs on first run.
 
 ---
 
@@ -55,9 +56,9 @@ Repeat for each dashboard file.
 1. Grafana UI → **Alerting → Alert rules → New alert rule** (or use the provisioning API)
 2. Alternatively paste the YAML into **Alerting → Admin → Export/Import**
 
-> **Contact point:** Create a contact point named `dispatcher-oncall` in
-> **Alerting → Contact points** (Pushover recommended for solo founder on-call).
-> Then create a notification policy routing `team=dispatcher` alerts to it.
+> **Contact point:** Create a contact point named `ospa-oncall` in
+> **Alerting → Contact points** (email / Pushover recommended for solo founder on-call).
+> Then create a notification policy routing `team=ospa` alerts to it.
 
 ---
 
@@ -69,34 +70,31 @@ Repeat for each dashboard file.
 3. Go to **Testing & synthetics → Synthetic Monitoring → Add check**
 4. Add an HTTP check using the config in `docs/grafana/synthetic-monitoring/probes.yaml`
    — two checks: one from **Sydney**, one from **Singapore**
-5. Target URL: `https://dispatcher.app/api/health` (update once domain is live)
+5. Target URL: `https://ospa.app/api/health` (update once domain is live)
 
 The probes feed the availability SLO calculation:
 ```promql
-sum_over_time(probe_success{job="dispatcher-health"}[30d])
-/ count_over_time(probe_success{job="dispatcher-health"}[30d])
+sum_over_time(probe_success{job="ospa-health"}[30d])
+/ count_over_time(probe_success{job="ospa-health"}[30d])
 ```
 
 ---
 
-## Custom metrics (planned)
+## Custom metrics
 
-The business dashboard references custom Prometheus counters/histograms that
-must be added to the server before those panels populate:
+The business dashboard references custom Prometheus counters/histograms emitted by the server:
 
 | Metric | Description | Location |
 |--------|-------------|----------|
-| `dispatcher_inference_queue_waiting` | BullMQ waiting jobs | `inference-queue.ts` |
-| `dispatcher_inference_queue_active` | BullMQ active jobs | `inference-queue.ts` |
-| `dispatcher_inference_jobs_completed_total` | Counter | `inference-queue.ts` |
-| `dispatcher_inference_jobs_failed_total` | Counter | `inference-queue.ts` |
-| `dispatcher_inference_duration_milliseconds` | Histogram (TTFT) | `inference-client.ts` |
-| `dispatcher_actions_total` | Counter by action type | `agent.ts` |
-| `dispatcher_pii_blocks_total` | Counter | eval assertion hook |
+| `ospa_inference_queue_waiting` | BullMQ waiting jobs | `inference-queue.ts` |
+| `ospa_inference_queue_active` | BullMQ active jobs | `inference-queue.ts` |
+| `ospa_inference_jobs_completed_total` | Counter | `inference-queue.ts` |
+| `ospa_inference_jobs_failed_total` | Counter | `inference-queue.ts` |
+| `ospa_inference_duration_milliseconds` | Histogram (TTFT) | `inference-client.ts` |
+| `ospa_actions_total` | Counter by action type | `inference-queue.ts` |
+| `ospa_pii_blocks_total` | Counter | `pii-span-processor.ts` |
 
-These are wired in the next Observability session (Story 4.2 — custom metrics).
-Until then, the System Health dashboard panels using standard OTel HTTP metrics
-will populate immediately once the server connects to Grafana Cloud.
+All metrics are live as of Story 4.2 (commit 454f891).
 
 ---
 
@@ -106,5 +104,5 @@ will populate immediately once the server connects to Grafana Cloud.
 |----------|----------|-------------|
 | `GRAFANA_OTLP_ENDPOINT` | Yes (prod) | OTLP gateway URL — `https://otlp-gateway-prod-au-southeast-1.grafana.net/otlp` |
 | `GRAFANA_OTLP_TOKEN` | Yes (prod) | OTLP ingestion token (from Grafana Cloud → Connections → OpenTelemetry) |
-| `GRAFANA_STACK_URL` | Provisioning only | Your stack URL e.g. `https://your-stack.grafana.net` |
+| `GRAFANA_STACK_URL` | Provisioning only | `https://osca.grafana.net` |
 | `GRAFANA_API_TOKEN` | Provisioning only | Service account token with Admin role |

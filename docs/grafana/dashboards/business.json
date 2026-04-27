@@ -16,7 +16,7 @@
     { "type": "panel", "id": "stat", "name": "Stat", "version": "" }
   ],
   "annotations": { "list": [] },
-  "description": "Dispatcher — agent sessions, inference performance, and action throughput",
+  "description": "OSPA — agent sessions, inference performance, and action throughput",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -45,7 +45,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "increase(http_server_duration_milliseconds_count{service_name=\"dispatcher-api\", http_route=\"/api/agent/start\", http_method=\"POST\"}[1h])",
+          "expr": "increase(http_server_duration_milliseconds_count{service_name=\"ospa-api\", http_route=\"/api/agent/start\", http_method=\"POST\"}[1h])",
           "legendFormat": "Sessions started",
           "refId": "A"
         }
@@ -68,13 +68,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "increase(dispatcher_inference_jobs_completed_total{service_name=\"dispatcher-api\"}[1h])",
+          "expr": "increase(ospa_inference_jobs_completed_total{service_name=\"ospa-api\"}[1h])",
           "legendFormat": "Completed",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "increase(dispatcher_inference_jobs_failed_total{service_name=\"dispatcher-api\"}[1h])",
+          "expr": "increase(ospa_inference_jobs_failed_total{service_name=\"ospa-api\"}[1h])",
           "legendFormat": "Failed",
           "refId": "B"
         }
@@ -112,13 +112,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(dispatcher_inference_duration_milliseconds_bucket{service_name=\"dispatcher-api\"}[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(ospa_inference_duration_milliseconds_bucket{service_name=\"ospa-api\"}[5m])))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(dispatcher_inference_duration_milliseconds_bucket{service_name=\"dispatcher-api\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ospa_inference_duration_milliseconds_bucket{service_name=\"ospa-api\"}[5m])))",
           "legendFormat": "p95",
           "refId": "B"
         }
@@ -148,7 +148,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "sum by (action_type) (rate(dispatcher_actions_total{service_name=\"dispatcher-api\"}[5m])) * 60",
+          "expr": "sum by (action_type) (rate(ospa_actions_total{service_name=\"ospa-api\"}[5m])) * 60",
           "legendFormat": "{{action_type}}",
           "refId": "A"
         }
@@ -178,7 +178,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "expr": "increase(dispatcher_pii_blocks_total{service_name=\"dispatcher-api\"}[1h])",
+          "expr": "increase(ospa_pii_blocks_total{service_name=\"ospa-api\"}[1h])",
           "legendFormat": "PII blocks (1h)",
           "refId": "A"
         }
@@ -189,7 +189,7 @@
   ],
   "refresh": "30s",
   "schemaVersion": 38,
-  "tags": ["dispatcher", "business", "product"],
+  "tags": ["ospa", "business", "product"],
   "templating": {
     "list": [
       {
@@ -208,8 +208,8 @@
   "time": { "from": "now-24h", "to": "now" },
   "timepicker": {},
   "timezone": "Australia/Brisbane",
-  "title": "Dispatcher — Business",
-  "uid": "dispatcher-business",
+  "title": "OSPA — Business",
+  "uid": "ospa-business",
   "version": 1,
   "weekStart": ""
 }

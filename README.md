@@ -1,4 +1,4 @@
-# Dispatcher
+# OSPA — OneSchool Personal Assistant
 
 AI-powered relief teacher supervision assistant for Queensland schools.
 

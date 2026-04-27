@@ -1,5 +1,5 @@
 {
-  "name": "dispatcher-server",
+  "name": "ospa-server",
   "private": true,
   "version": "0.1.0",
   "type": "module",

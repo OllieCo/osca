@@ -68,8 +68,8 @@ if (config.SENTRY_DSN) {
 }
 
 app.listen(config.PORT, () => {
-  const envLabel = config.DISPATCHER_ENV !== "prod" ? ` [ENV: ${config.DISPATCHER_ENV.toUpperCase()}]` : ""
-  logger.info(`Dispatcher API listening on http://localhost:${config.PORT}${envLabel}`)
+  const envLabel = config.OSPA_ENV !== "prod" ? ` [ENV: ${config.OSPA_ENV.toUpperCase()}]` : ""
+  logger.info(`OSPA API listening on http://localhost:${config.PORT}${envLabel}`)
 })
 
 export default app
