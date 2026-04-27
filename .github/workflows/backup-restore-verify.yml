@@ -1,0 +1,113 @@
+name: Backup — weekly restore verify
+
+# Story 1.2 AC 1.2.2 / 1.2.3 — automated restore-to-scratch + alert on drift.
+#
+# Runs every Sunday at 03:30 UTC (off-peak AEST).
+# Also runnable on demand via workflow_dispatch.
+#
+# What it does:
+#   1. Creates a Postgres dump from the dev DATABASE_URL (the test fixture).
+#   2. Checksums + encrypts it (end-to-end test of the full backup pipeline).
+#   3. Decrypts, verifies checksum, restores to a scratch DB.
+#   4. Asserts table existence and minimum row/table counts.
+#   5. Cleans up scratch DB and plaintext artefacts.
+#
+# In production: replace the DATABASE_URL secret with the real DB URL and
+# BACKUP_DEST_PATH with a mounted AU-resident bucket path (once hosting is decided).
+
+on:
+  schedule:
+    - cron: "30 3 * * 0"   # Sunday 03:30 UTC
+  workflow_dispatch:        # allow manual trigger
+
+jobs:
+  restore-verify:
+    name: Restore-to-scratch integrity check
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dispatcher
+          POSTGRES_PASSWORD: dispatcher
+          POSTGRES_DB: dispatcher_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://dispatcher:dispatcher@localhost:5432/dispatcher_dev
+      BACKUP_DEST_PATH: /tmp/dispatcher-backups
+      # BACKUP_ENCRYPTION_KEY is provided via a GitHub Actions secret
+      BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+      RESTORE_DB_NAME: dispatcher_restore_verify
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Postgres client tools
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Seed test schema
+        run: |
+          # Apply the Prisma schema via raw SQL so we have tables to back up
+          psql "$DATABASE_URL" <<'SQL'
+            CREATE TABLE IF NOT EXISTS schools (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              domain TEXT UNIQUE,
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW(),
+              deleted_at TIMESTAMPTZ
+            );
+            CREATE TABLE IF NOT EXISTS users (
+              id TEXT PRIMARY KEY,
+              email TEXT UNIQUE NOT NULL,
+              display_name TEXT NOT NULL,
+              role TEXT NOT NULL DEFAULT 'TEACHER',
+              password_hash TEXT,
+              school_id TEXT NOT NULL REFERENCES schools(id),
+              created_at TIMESTAMPTZ DEFAULT NOW(),
+              updated_at TIMESTAMPTZ DEFAULT NOW(),
+              deleted_at TIMESTAMPTZ
+            );
+            CREATE TABLE IF NOT EXISTS audit_logs (
+              id TEXT PRIMARY KEY,
+              school_id TEXT NOT NULL REFERENCES schools(id),
+              user_id TEXT REFERENCES users(id),
+              action TEXT NOT NULL,
+              metadata JSONB,
+              ip_address TEXT,
+              user_agent TEXT,
+              created_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            INSERT INTO schools (id, name) VALUES ('s1', 'Springfield State School') ON CONFLICT DO NOTHING;
+            INSERT INTO users (id, email, display_name, school_id) VALUES ('u1', 'jane@eq.edu.au', 'Jane Doe', 's1') ON CONFLICT DO NOTHING;
+            INSERT INTO audit_logs (id, school_id, action) VALUES ('a1', 's1', 'LOGIN') ON CONFLICT DO NOTHING;
+          SQL
+
+      - name: Make scripts executable
+        run: chmod +x server/scripts/backup/*.sh
+
+      - name: Run pg-backup
+        run: |
+          mkdir -p "$BACKUP_DEST_PATH/pg"
+          bash server/scripts/backup/pg-backup.sh
+
+      - name: Run restore-verify
+        run: bash server/scripts/backup/pg-restore-verify.sh
+
+      - name: Report on failure
+        if: failure()
+        run: |
+          echo "::error::Backup restore verification FAILED — backup may be corrupted or backup scripts have regressed."
+          echo "::error::Check the logs above and alert the on-call engineer."
+          # In production wire SLACK_WEBHOOK_URL as a secret and uncomment:
+          # curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+          #   -H "Content-Type: application/json" \
+          #   -d '{"text":"🔴 Dispatcher weekly restore-verify FAILED — check GitHub Actions."}'

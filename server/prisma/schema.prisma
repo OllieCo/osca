@@ -39,11 +39,12 @@ enum AuditAction {
 // ── Models ────────────────────────────────────────────────────────────────────
 
 model School {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
-  domain    String?  @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  domain    String?   @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at") // soft-delete; hard-deleted after 90 days by retention-sweep
 
   users         User[]
   subscriptions Subscription[]
@@ -53,14 +54,15 @@ model School {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  displayName  String   @map("display_name")
-  role         UserRole @default(TEACHER)
-  passwordHash String?  @map("password_hash")
-  schoolId     String   @map("school_id")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id           String    @id @default(cuid())
+  email        String    @unique
+  displayName  String    @map("display_name")
+  role         UserRole  @default(TEACHER)
+  passwordHash String?   @map("password_hash")
+  schoolId     String    @map("school_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at") // soft-delete; hard-deleted after 90 days by retention-sweep
 
   school    School     @relation(fields: [schoolId], references: [id])
   auditLogs AuditLog[]

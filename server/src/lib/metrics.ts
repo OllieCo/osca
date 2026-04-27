@@ -80,6 +80,36 @@ export const actionsTotal = meter.createCounter("ospa_actions_total", {
   description: "Total agent actions planned, by action type",
 })
 
+// ── Retention sweep ───────────────────────────────────────────────────────────
+
+/** Counter incremented each time the retention sweep hard-deletes soft-deleted users. */
+export const retentionUsersHardDeleted = meter.createCounter(
+  "ospa_retention_users_hard_deleted_total",
+  { description: "Users hard-deleted by the retention sweep after the 90-day grace period" }
+)
+
+/** Counter incremented each time the retention sweep hard-deletes soft-deleted schools. */
+export const retentionSchoolsHardDeleted = meter.createCounter(
+  "ospa_retention_schools_hard_deleted_total",
+  { description: "Schools hard-deleted by the retention sweep after the 90-day grace period" }
+)
+
+/** Counter incremented each time the retention sweep purges aged-out audit logs. */
+export const retentionAuditLogsPurged = meter.createCounter(
+  "ospa_retention_audit_logs_purged_total",
+  { description: "AuditLog rows deleted by the retention sweep after 7-year retention" }
+)
+
+/** Histogram of retention sweep wall-clock duration in milliseconds. */
+export const retentionSweepDuration = meter.createHistogram(
+  "ospa_retention_sweep_duration_milliseconds",
+  {
+    description: "Wall-clock time for a full retention sweep run, in milliseconds",
+    unit: "ms",
+    advice: { explicitBucketBoundaries: [50, 100, 250, 500, 1_000, 5_000, 15_000, 60_000] },
+  }
+)
+
 // ── PII blocks ────────────────────────────────────────────────────────────────
 
 /**
