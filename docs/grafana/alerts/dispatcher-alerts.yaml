@@ -1,0 +1,278 @@
+# Dispatcher — Grafana Alerting Rules
+#
+# Import via: Grafana UI → Alerting → Alert rules → Import, or via the
+# provisioning script: node scripts/grafana-provision.mjs
+#
+# Routing: all alerts → on-call contact point (configure in Grafana → Alerting
+# → Contact points → add "dispatcher-oncall" with Pushover/OpsGenie details).
+
+apiVersion: 1
+
+groups:
+  # ── SLO burn rate ──────────────────────────────────────────────────────────
+  - name: slo-burn
+    folder: Dispatcher
+    interval: 1m
+    rules:
+      - uid: dispatcher-slo-fast-burn
+        title: "SLO — Fast burn (1h window)"
+        condition: C
+        for: 5m
+        labels:
+          severity: critical
+          team: dispatcher
+        annotations:
+          summary: "API error-budget burning fast — {{ $values.C.Value | printf \"%.1f\" }}x rate"
+          description: >
+            Fast burn: error rate is consuming error budget more than 14x faster
+            than allowed. At this rate the 30-day budget will be exhausted in ~2h.
+            Check /api/health, Sentry, and server logs immediately.
+          runbook_url: "https://github.com/OllieCo/osca/blob/main/docs/runbooks/slo-burn.md"
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: "${DS_PROMETHEUS}"
+            model:
+              expr: >
+                sum(rate(http_server_duration_milliseconds_count{
+                  service_name="dispatcher-api", http_status_code=~"5.."}[1h]))
+                /
+                sum(rate(http_server_duration_milliseconds_count{
+                  service_name="dispatcher-api"}[1h]))
+              legendFormat: "1h error rate"
+              refId: A
+          - refId: B
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "${DS_PROMETHEUS}"
+            model:
+              expr: >
+                sum(rate(http_server_duration_milliseconds_count{
+                  service_name="dispatcher-api", http_status_code=~"5.."}[5m]))
+                /
+                sum(rate(http_server_duration_milliseconds_count{
+                  service_name="dispatcher-api"}[5m]))
+              legendFormat: "5m error rate"
+              refId: B
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: math
+              # 99.5% SLO → 0.5% error budget. Fast burn = 14× (depletes in ~2h)
+              expression: "$B > (14 * 0.005)"
+              refId: C
+
+      - uid: dispatcher-slo-slow-burn
+        title: "SLO — Slow burn (6h window)"
+        condition: C
+        for: 15m
+        labels:
+          severity: warning
+          team: dispatcher
+        annotations:
+          summary: "SLO error budget slow burn — {{ $values.C.Value | printf \"%.1f\" }}x rate"
+          description: >
+            Slow burn: error rate is consuming error budget 3x faster than
+            sustainable over 6 hours. Review recent deployments and open errors.
+          runbook_url: "https://github.com/OllieCo/osca/blob/main/docs/runbooks/slo-burn.md"
+        data:
+          - refId: A
+            relativeTimeRange: { from: 21600, to: 0 }
+            datasourceUid: "${DS_PROMETHEUS}"
+            model:
+              expr: >
+                sum(rate(http_server_duration_milliseconds_count{
+                  service_name="dispatcher-api", http_status_code=~"5.."}[6h]))
+                /
+                sum(rate(http_server_duration_milliseconds_count{
+                  service_name="dispatcher-api"}[6h]))
+              refId: A
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: math
+              # Slow burn = 3× over 6h
+              expression: "$A > (3 * 0.005)"
+              refId: C
+
+  # ── Latency SLO ────────────────────────────────────────────────────────────
+  - name: latency
+    folder: Dispatcher
+    interval: 1m
+    rules:
+      - uid: dispatcher-latency-p95
+        title: "SLO — p95 latency breach on /api/agent"
+        condition: C
+        for: 5m
+        labels:
+          severity: warning
+          team: dispatcher
+        annotations:
+          summary: "p95 latency on /api/agent > 2s (SLO breach)"
+          description: >
+            The 95th percentile response time on /api/agent routes has exceeded
+            the 2 000ms SLO target for 5 consecutive minutes. Check Ollama
+            inference latency and BullMQ queue depth.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "${DS_PROMETHEUS}"
+            model:
+              expr: >
+                histogram_quantile(0.95,
+                  sum by (le) (
+                    rate(http_server_duration_milliseconds_bucket{
+                      service_name="dispatcher-api",
+                      http_route=~"/api/agent.*"}[5m])
+                  )
+                )
+              legendFormat: "p95 /api/agent"
+              refId: A
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              expression: "$A"
+              conditions:
+                - { evaluator: { type: gt, params: [2000] }, operator: { type: and } }
+              refId: C
+
+  # ── Queue depth ────────────────────────────────────────────────────────────
+  - name: queue
+    folder: Dispatcher
+    interval: 1m
+    rules:
+      - uid: dispatcher-queue-depth
+        title: "Inference queue backlog > 10"
+        condition: C
+        for: 3m
+        labels:
+          severity: warning
+          team: dispatcher
+        annotations:
+          summary: "BullMQ inference queue has {{ $values.A.Value }} waiting jobs"
+          description: >
+            More than 10 inference jobs are waiting in the queue for 3+ minutes.
+            This indicates Ollama cannot keep up with demand or the worker has
+            stalled. Check worker health and Ollama container status.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 180, to: 0 }
+            datasourceUid: "${DS_PROMETHEUS}"
+            model:
+              expr: "dispatcher_inference_queue_waiting{service_name=\"dispatcher-api\"}"
+              legendFormat: "Waiting jobs"
+              refId: A
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              expression: "$A"
+              conditions:
+                - { evaluator: { type: gt, params: [10] }, operator: { type: and } }
+              refId: C
+
+      - uid: dispatcher-queue-failed
+        title: "Inference job failure rate elevated"
+        condition: C
+        for: 5m
+        labels:
+          severity: critical
+          team: dispatcher
+        annotations:
+          summary: "Inference jobs failing — {{ $values.A.Value }} failures in 5m"
+          description: >
+            Inference jobs are failing (exhausted all retries). This means
+            teachers are seeing stuck or failed actions. Check Ollama logs
+            and the BullMQ dead-letter queue immediately.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: "${DS_PROMETHEUS}"
+            model:
+              expr: >
+                increase(dispatcher_inference_jobs_failed_total{
+                  service_name="dispatcher-api"}[5m])
+              legendFormat: "Failed jobs (5m)"
+              refId: A
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              expression: "$A"
+              conditions:
+                - { evaluator: { type: gt, params: [3] }, operator: { type: and } }
+              refId: C
+
+  # ── Health check ───────────────────────────────────────────────────────────
+  - name: health
+    folder: Dispatcher
+    interval: 30s
+    rules:
+      - uid: dispatcher-health-down
+        title: "API health check returning 503"
+        condition: C
+        for: 2m
+        labels:
+          severity: critical
+          team: dispatcher
+        annotations:
+          summary: "Dispatcher API /api/health returning 503 (Postgres or Redis down)"
+          description: >
+            The /api/health endpoint is returning HTTP 503, indicating Postgres
+            or Redis is unreachable. The service is degraded. Check container
+            health and database connectivity immediately.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 120, to: 0 }
+            datasourceUid: "${DS_PROMETHEUS}"
+            model:
+              expr: >
+                sum(rate(http_server_duration_milliseconds_count{
+                  service_name="dispatcher-api",
+                  http_route="/api/health",
+                  http_status_code="503"}[1m]))
+              legendFormat: "503 rate on /api/health"
+              refId: A
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              expression: "$A"
+              conditions:
+                - { evaluator: { type: gt, params: [0] }, operator: { type: and } }
+              refId: C
+
+  # ── Memory ─────────────────────────────────────────────────────────────────
+  - name: resources
+    folder: Dispatcher
+    interval: 1m
+    rules:
+      - uid: dispatcher-memory-high
+        title: "API process memory > 512MB"
+        condition: C
+        for: 10m
+        labels:
+          severity: warning
+          team: dispatcher
+        annotations:
+          summary: "API RSS memory is {{ $values.A.Value | humanize1024 }}B — possible memory leak"
+          description: >
+            The Node.js API process has been using > 512MB RSS for 10+ minutes.
+            Check for memory leaks, unclosed connections, or large in-memory
+            session accumulation.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: "${DS_PROMETHEUS}"
+            model:
+              expr: "process_resident_memory_bytes{service_name=\"dispatcher-api\"}"
+              legendFormat: "RSS bytes"
+              refId: A
+          - refId: C
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              expression: "$A"
+              conditions:
+                - { evaluator: { type: gt, params: [536870912] }, operator: { type: and } }
+              refId: C

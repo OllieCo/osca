@@ -1,0 +1,73 @@
+# Dispatcher — Grafana Synthetic Monitoring probes
+#
+# These uptime probes measure availability from AU/SG for the SLO:
+#   99.5% availability on GET /api/health over 30-day rolling window
+#
+# Apply via: Grafana UI → Synthetic Monitoring → Add check
+# (Synthetic Monitoring plugin must be installed on your Grafana Cloud stack)
+#
+# Probe locations chosen:
+#   - Sydney (au-syd-1)    — primary market, closest to server
+#   - Singapore (ap-sin-1) — secondary AU/SG teacher base; also validates cross-region routing
+
+checks:
+  - name: "Dispatcher API — Health (SYD)"
+    job: dispatcher-health
+    target: "https://dispatcher.app/api/health"
+    frequency: 60000        # every 60s
+    timeout: 5000           # 5s timeout — any slower is an SLO incident
+    probeLocations:
+      - au-syd-1
+    settings:
+      http:
+        method: GET
+        validStatusCodes: [200]
+        validHTTPVersions: ["HTTP/1.1", "HTTP/2.0"]
+        failIfBodyNotMatchesRegexp:
+          - '"ok":true'       # body must include ok:true
+        tlsConfig:
+          insecureSkipVerify: false
+        headers:
+          - name: "User-Agent"
+            value: "grafana-synthetic-monitoring"
+        noFollowRedirects: false
+    labels:
+      service: dispatcher-api
+      environment: production
+      region: au-southeast-1
+
+  - name: "Dispatcher API — Health (SGP)"
+    job: dispatcher-health
+    target: "https://dispatcher.app/api/health"
+    frequency: 60000
+    timeout: 5000
+    probeLocations:
+      - ap-sin-1
+    settings:
+      http:
+        method: GET
+        validStatusCodes: [200]
+        validHTTPVersions: ["HTTP/1.1", "HTTP/2.0"]
+        failIfBodyNotMatchesRegexp:
+          - '"ok":true'
+        tlsConfig:
+          insecureSkipVerify: false
+        headers:
+          - name: "User-Agent"
+            value: "grafana-synthetic-monitoring"
+        noFollowRedirects: false
+    labels:
+      service: dispatcher-api
+      environment: production
+      region: ap-southeast-1
+
+# ── SLO availability calculation ──────────────────────────────────────────────
+# These probes feed the availability SLO query in Grafana:
+#
+#   sum_over_time(probe_success{job="dispatcher-health"}[30d])
+#   / count_over_time(probe_success{job="dispatcher-health"}[30d])
+#
+# Target: >= 0.995 (99.5%) — error budget = 3.6 hours/month
+#
+# Wire this query into a Grafana SLO (Alerting → SLOs → Create SLO)
+# using the Synthetic Monitoring data source.
