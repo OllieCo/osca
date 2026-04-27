@@ -14,6 +14,8 @@ import healthRouter from "./routes/health.js"
 import agentRouter from "./routes/agent.js"
 import detokenizeRouter from "./routes/detokenize.js"
 import chatRouter from "./routes/chat.js"
+import { globalLimiter, agentLimiter, healthLimiter } from "./lib/rate-limit.js"
+import { abuseSignalMiddleware } from "./lib/abuse-signals.js"
 
 initialiseSentry()
 
@@ -55,6 +57,14 @@ app.use(
 )
 app.use(cors({ origin: config.CORS_ORIGIN }))
 app.use(express.json({ limit: "2mb" }))
+
+// ── Rate limiting ──────────────────────────────────────────────────────────────
+app.use(globalLimiter)
+app.use("/api/health", healthLimiter)
+app.use("/api/agent", agentLimiter)
+
+// ── Abuse signal logging (401 / 429 / 400 spikes) ─────────────────────────────
+app.use(abuseSignalMiddleware)
 
 app.use("/api", healthRouter)
 app.use("/api", agentRouter)
