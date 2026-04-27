@@ -3,6 +3,7 @@
 
 import { config } from "./config.js"
 import { logger } from "./logger.js"
+import { inferenceDuration } from "./metrics.js"
 
 const DEFAULT_TIMEOUT_MS = 60_000
 
@@ -48,7 +49,9 @@ export async function chatWithOllama(
 
   const data = (await res.json()) as { message?: { content?: string } }
   const content = data.message?.content ?? ""
-  logger.debug({ model, durationMs: Date.now() - start, responseLen: content.length }, "inference complete")
+  const durationMs = Date.now() - start
+  inferenceDuration.record(durationMs, { model })
+  logger.debug({ model, durationMs, responseLen: content.length }, "inference complete")
   return content
 }
 

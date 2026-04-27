@@ -12,6 +12,13 @@ import { config } from "./config.js"
 import { logger } from "./logger.js"
 import { sessions } from "./session-store.js"
 import { planNextAction } from "./action-planner.js"
+import {
+  inferenceQueueWaiting,
+  inferenceQueueActive,
+  inferenceJobsCompleted,
+  inferenceJobsFailed,
+  actionsTotal,
+} from "./metrics.js"
 
 // ── Connection ────────────────────────────────────────────────────────────────
 // BullMQ requires maxRetriesPerRequest: null for its blocking commands (BRPOP
@@ -47,6 +54,11 @@ export const inferenceQueue = new Queue<InferenceJobData, InferenceJobResult>("i
   },
 })
 
+// Track jobs entering the waiting state
+inferenceQueue.on("waiting", () => {
+  inferenceQueueWaiting.add(1)
+})
+
 // ── Worker ────────────────────────────────────────────────────────────────────
 
 async function processInferenceJob(job: Job<InferenceJobData, InferenceJobResult>) {
@@ -68,6 +80,8 @@ async function processInferenceJob(job: Job<InferenceJobData, InferenceJobResult
   session.pendingAction = action
   session.status = "awaiting"
 
+  actionsTotal.add(1, { action_type: action.type })
+
   logger.debug(
     { sessionId, jobId: job.id, actionType: action.type },
     "Inference job completed"
@@ -85,11 +99,34 @@ export const inferenceWorker = new Worker<InferenceJobData, InferenceJobResult>(
   }
 )
 
+inferenceWorker.on("active", () => {
+  // Job moved from waiting → active
+  inferenceQueueWaiting.add(-1)
+  inferenceQueueActive.add(1)
+})
+
+inferenceWorker.on("completed", () => {
+  inferenceQueueActive.add(-1)
+  inferenceJobsCompleted.add(1)
+})
+
 inferenceWorker.on("failed", (job, err) => {
   logger.error(
     { jobId: job?.id, sessionId: job?.data?.sessionId, err },
     "Inference job failed all retries"
   )
+
+  // Determine if this is the final failure (all retries exhausted)
+  const isFinal =
+    job != null &&
+    job.opts?.attempts != null &&
+    job.attemptsMade >= job.opts.attempts
+
+  if (isFinal) {
+    inferenceQueueActive.add(-1)
+    inferenceJobsFailed.add(1)
+  }
+
   const sessionId = job?.data?.sessionId
   if (sessionId) {
     const session = sessions.get(sessionId)

@@ -1,5 +1,6 @@
 import type { Span, SpanProcessor, ReadableSpan } from "@opentelemetry/sdk-trace-base"
 import type { Context } from "@opentelemetry/api"
+import { piiBlocksTotal } from "./metrics.js"
 
 // Fields that must never appear in OTel span attributes
 const PII_ATTRIBUTE_PATTERNS = [
@@ -33,10 +34,14 @@ export class PiiSpanProcessor implements SpanProcessor {
   onEnd(span: ReadableSpan): void {
     try {
       const attrs = span.attributes as Record<string, unknown>
+      const hadPii = Object.keys(attrs).some(isPii)
       const scrubbed = scrubAttributes(attrs)
       // Replace attributes in-place (ReadableSpan attributes are mutable pre-export)
       Object.keys(attrs).forEach((k) => delete attrs[k])
       Object.assign(attrs, scrubbed)
+      if (hadPii) {
+        piiBlocksTotal.add(1)
+      }
     } catch {
       // Fail-closed: drop span rather than risk PII leaking
       return
