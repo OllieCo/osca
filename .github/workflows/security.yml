@@ -87,7 +87,7 @@ jobs:
           output: "./sbom.xml"
 
       - name: Upload SBOM artefact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-${{ github.sha }}
           path: sbom.xml
@@ -116,7 +116,7 @@ jobs:
 
       - name: Upload SAST results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: semgrep-${{ github.sha }}
           path: semgrep-results.json
