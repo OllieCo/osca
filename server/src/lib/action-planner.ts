@@ -1,11 +1,12 @@
-// Plans the next agent action using Ollama directly (n8n removed).
+// Plans the next agent action using the active inference backend.
+// Backend selection (Ollama vs vLLM) is controlled by the `vllm-backend`
+// feature flag — see server/src/lib/inference/factory.ts.
 // Shared origin: MySchool action-planner.ts — n8n import replaced with inference-client.
 
 import type { AgentAction, AgentStep, ScrapedRecord } from "../types/index.js"
-import { chatWithOllama } from "./inference-client.js"
+import { getInferenceAdapter } from "./inference/factory.js"
+import { config } from "./config.js"
 import { getPrompt } from "../prompts/index.js"
-
-const OLLAMA_MODEL = "gemma4:12b"
 
 export async function planNextAction(
   goal: string,
@@ -13,8 +14,13 @@ export async function planNextAction(
   steps: AgentStep[],
   rawPageText = ""
 ): Promise<AgentAction> {
+  const adapter = await getInferenceAdapter()
   const prompt = buildPrompt(goal, currentPage, steps, rawPageText)
-  const raw = await chatWithOllama(OLLAMA_MODEL, prompt, getPrompt("supervision"))
+  const raw = await adapter.chat({
+    model: config.OLLAMA_MODEL,
+    prompt,
+    systemPrompt: getPrompt("supervision"),
+  })
   return parseActionResponse(raw)
 }
 

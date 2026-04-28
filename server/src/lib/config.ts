@@ -17,9 +17,13 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   CORS_ORIGIN: z.string().url().default("http://localhost:3000"),
 
-  // Inference
+  // Inference — Ollama
   OLLAMA_BASE_URL: z.string().url().default("http://localhost:11434"),
   OLLAMA_MODEL: z.string().min(1).default("gemma3:4b"),
+
+  // Inference — vLLM (OpenAI-compatible). Only required when the vllm-backend
+  // feature flag is enabled. Defaults to localhost so dev never fails to boot.
+  VLLM_BASE_URL: z.string().url().default("http://localhost:8000"),
 
   // Persistence
   DATABASE_URL: z.string().url().default("postgresql://dispatcher:dispatcher@localhost:5432/dispatcher_dev"),
