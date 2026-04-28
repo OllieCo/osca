@@ -1,0 +1,49 @@
+---
+title: Dispatcher Documentation
+description: AI-powered OneSchool admin assistant for Queensland teachers.
+template: splash
+hero:
+  tagline: Spend less time in OneSchool. Spend more time teaching.
+  image:
+    file: ../../assets/houston.webp
+  actions:
+    - text: Quick install
+      link: /getting-started/install/
+      icon: right-arrow
+      variant: primary
+    - text: How it works
+      link: /getting-started/first-workflow/
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## What is Dispatcher?
+
+Dispatcher is a Chrome extension that sits on top of OneSchool and automates the most repetitive administrative workflows — Supervision scheduling, Relief allocation, and clash detection — using a local AI that runs on your school's own server.
+
+**No data leaves your school network.** The AI runs on-premises (not in the cloud), and student and staff identifiers are tokenised before leaving the browser.
+
+## Key features
+
+<CardGrid stagger>
+  <Card title="Supervision scheduling" icon="pencil">
+    Automatically propose supervision allocations based on current staff availability and timetable data.
+  </Card>
+  <Card title="Relief allocation" icon="random">
+    Find available relief teachers and generate relief plans without manual cross-referencing.
+  </Card>
+  <Card title="Clash detection" icon="warning">
+    Surface timetable clashes instantly across multiple grids — no more spreadsheet gymnastics.
+  </Card>
+  <Card title="Privacy-first" icon="shield">
+    Student QSNs, staff names, and employee IDs are replaced with opaque tokens before the AI ever sees them.
+  </Card>
+</CardGrid>
+
+## Quick links
+
+- [**Quick install →**](/getting-started/install/) — Get Dispatcher running in 15 minutes
+- [**First workflow →**](/getting-started/first-workflow/) — Run your first AI-assisted task
+- [**IT admin guide →**](/admin/managed-install/) — Deploy via Google Admin or Intune
+- [**Security overview →**](/security/overview/) — Data handling, privacy, and compliance
