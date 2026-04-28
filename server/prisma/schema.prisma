@@ -125,6 +125,33 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+/// Feature flag definition. Evaluation logic lives in server/src/lib/flags.ts.
+/// Admin Console reads/writes this table; the API exposes evaluated values via GET /api/flags.
+/// No FK to School — flags are global config, not per-school rows.
+model FeatureFlag {
+  /// Kebab-case identifier, e.g. "relief-workflow-v2". Immutable after creation.
+  key             String           @id
+  description     String           // human-readable purpose, shown in Admin Console
+  /// Return value when there is no school context (anonymous callers) or when no other rule matches.
+  defaultEnabled  Boolean          @default(false) @map("default_enabled")
+  /// True = this flag is a kill switch for a risky feature. Ships with defaultEnabled=false.
+  killSwitch      Boolean          @default(false) @map("kill_switch")
+  /// 0–100. 0 = nobody (unless allowlisted). 100 = everybody (unless denylisted).
+  rolloutPct      Int              @default(0) @map("rollout_pct")
+  /// School IDs that always get the flag ON regardless of rolloutPct.
+  allowlist       String[]         @default([]) @map("allowlist")
+  /// School IDs that always get the flag OFF regardless of rolloutPct or allowlist.
+  denylist        String[]         @default([]) @map("denylist")
+  /// If set, schools on a lower plan see defaultEnabled (flag is invisible to them).
+  requiredPlan    SubscriptionPlan? @map("required_plan")
+  /// Optional hygiene deadline — flags at 100%/0% past this date appear in the stale report.
+  expiresAt       DateTime?        @map("expires_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@map("feature_flags")
+}
+
 /// Product-analytics events. Separate from AuditLog — different retention, different access controls.
 /// Populated by server/src/lib/telemetry/emit.ts. Never contains L4+ data (PII / scraped content).
 /// Access: read-only for product analytics role; write-only for the API/worker.

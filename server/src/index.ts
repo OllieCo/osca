@@ -14,6 +14,7 @@ import healthRouter from "./routes/health.js"
 import agentRouter from "./routes/agent.js"
 import detokenizeRouter from "./routes/detokenize.js"
 import chatRouter from "./routes/chat.js"
+import flagsRouter from "./routes/flags.js"
 import { globalLimiter, agentLimiter, healthLimiter } from "./lib/rate-limit.js"
 import { abuseSignalMiddleware } from "./lib/abuse-signals.js"
 import { freemiumGuard } from "./lib/freemium.js"
@@ -76,6 +77,7 @@ app.use("/api", healthRouter)
 app.use("/api", agentRouter)
 app.use("/api", detokenizeRouter)
 app.use("/api", chatRouter)
+app.use("/api", flagsRouter)
 
 // Sentry error handler must come after routes, before other error handlers
 if (config.SENTRY_DSN) {
