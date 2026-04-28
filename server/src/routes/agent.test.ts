@@ -10,6 +10,12 @@ vi.mock("../lib/inference-queue.js", () => ({
   },
 }))
 
+// Silence telemetry in route tests — it's fire-and-forget, tested separately.
+vi.mock("../lib/telemetry/emit.js", () => ({
+  emit: vi.fn().mockResolvedValue(undefined),
+  emitAsync: vi.fn(),
+}))
+
 import express from "express"
 import agentRouter from "./agent.js"
 import detokenizeRouter from "./detokenize.js"
