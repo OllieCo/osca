@@ -48,7 +48,7 @@ jobs:
       RESTORE_DB_NAME: dispatcher_restore_verify
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Postgres client tools
         run: sudo apt-get install -y postgresql-client
